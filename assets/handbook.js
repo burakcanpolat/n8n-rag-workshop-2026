@@ -238,7 +238,8 @@
           score += s;
         });
         if (!ok) return;
-        if (r._t === whole || r._h === whole) score += 10;
+        if (r._t === whole && !r._h) score += 20;       /* the page itself, e.g. "sozluk" */
+        else if (r._t === whole || r._h === whole) score += 10;
         if (terms.length > 1 && r._x.indexOf(whole) > -1) score += 1;
         if (r.k === "prompt") score += 0.5;
         out.push({ r: r, s: score });
@@ -394,7 +395,7 @@
     var targets = src.map(function (a) { return d.getElementById(decodeURIComponent(a.hash.slice(1))); });
     var ind = d.querySelector(".rail-ind");
     var railNav = d.querySelector(".rail-nav");
-    var current = -1;
+    var current = -1, picked = -1, lockUntil = 0;
     function setCurrent(i) {
       if (i === current) return;
       current = i;
@@ -411,25 +412,59 @@
       }
     }
     var ticking = false;
+    function onScreen(i) {
+      if (i < 0 || !targets[i]) return false;
+      var top = targets[i].getBoundingClientRect().top;
+      return top >= 0 && top < window.innerHeight;
+    }
     function compute() {
       ticking = false;
+      if (Date.now() < lockUntil) return;          /* a rail click is still scrolling */
       var line = window.innerWidth < 1024 ? 96 : 150;
       var idx = 0;
       for (var i = 0; i < targets.length; i++) {
         if (targets[i] && targets[i].getBoundingClientRect().top - line <= 0) idx = i;
       }
       var doc = d.documentElement;
-      if (window.innerHeight + window.pageYOffset >= doc.scrollHeight - 4) idx = targets.length - 1;
+      if (window.innerHeight + window.pageYOffset >= doc.scrollHeight - 4) {
+        /* the page cannot scroll further: keep a clicked target if it is on screen,
+           otherwise take the last target whose top is inside the viewport */
+        if (onScreen(picked)) idx = picked;
+        else for (var j = targets.length - 1; j > idx; j--) { if (onScreen(j)) { idx = j; break; } }
+      } else {
+        picked = -1;
+      }
       setCurrent(idx);
     }
+    function pick(i) {
+      if (i < 0) return;
+      picked = i;
+      lockUntil = Date.now() + 700;
+      setCurrent(i);
+    }
+    function indexOfHash(h) {
+      h = decodeURIComponent((h || "").replace(/^#/, ""));
+      if (!h) return -1;
+      for (var i = 0; i < targets.length; i++) { if (targets[i] && targets[i].id === h) return i; }
+      return -1;
+    }
+    [links, inline].forEach(function (group) {
+      group.forEach(function (a, j) { on(a, "click", function () { pick(j); }); });
+    });
+    window.addEventListener("hashchange", function () { var i = indexOfHash(location.hash); if (i !== picked) pick(i); });
     function schedule() { if (!ticking) { ticking = true; window.requestAnimationFrame(compute); } }
     if ("IntersectionObserver" in window) {
       var io = new IntersectionObserver(schedule, { rootMargin: "-120px 0px -60% 0px", threshold: [0, 1] });
       targets.forEach(function (t) { if (t) io.observe(t); });
     }
-    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("scroll", function () {
+      /* a long smooth scroll outlasts 700 ms: keep the lock until the scroll has been quiet for 150 ms */
+      if (Date.now() < lockUntil) lockUntil = Math.max(lockUntil, Date.now() + 150);
+      schedule();
+    }, { passive: true });
     window.addEventListener("resize", schedule);
-    compute();
+    var start = indexOfHash(location.hash);
+    if (start > -1) pick(start); else compute();
   })();
 
   /* ---------------------------------------------------------- wide figures */
