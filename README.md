@@ -1,0 +1,3 @@
+# 2023'ten 2026'ya: Belgelerinden Cevap Veren Asistan
+
+Bu klasör 27 Eylül 2026 Pazar, 11:00-12:30 (Türkiye saati) online n8n eğitiminin yayına hazır halidir: katılımcı el kitabı [index.html](index.html) (önce kopyala düzeninde üniteler 1.1-1.8, P1-P19 promptları ve başvuru bölümleri), eğitim kiti [ImbatPedal-Workshop.zip](ImbatPedal-Workshop.zip) (kurgusal İmbat Pedal belgeleri, beş workflow JSON dosyası, promptlar, test soruları ve sözlük; el kitabındaki kit linki bu dosyayı gösterir, bu yüzden ikisi yan yana durur) ve eğitmen notları çıkarılmış sunum [deck/index.html](deck/index.html). Dosyalar elle düzenlenmez; kaynak parçalardan `_tools/rebuild_publish.py` ile yeniden üretilir. Veriler kurgusaldır, kişisel veri içermez.

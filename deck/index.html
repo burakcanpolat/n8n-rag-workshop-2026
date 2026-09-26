@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2023'ten 2026'ya: Belgelerinden Cevap Veren Asistan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#FFFFFF;
+  --panel:#F7F9FB;
+  --navy:#16365C;
+  --ink:#1C2733;
+  --muted:#5F6E7E;
+  --rule:#E3E8EF;
+  --teal:#0E7490;
+  --teal-soft:#E9F5F8;
+  --warn:#B45309;
+  --ok:#15803D;
+  --radius:8px;
+  --shadow:0 1px 2px rgba(20,60,95,0.08);
+  --app-bg:#E7ECF2;
+  --app-ink:#1C2733;
+  --app-panel:#FFFFFF;
+  --app-rule:#D7E0E9;
+  --app-muted:#7B8A9C;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --app-bg:#0F1720;
+    --app-ink:#E4EBF2;
+    --app-panel:#17222D;
+    --app-rule:#26333F;
+    --app-muted:#93A3B4;
+  }
+}
+:root[data-theme="dark"]{
+  --app-bg:#0F1720;
+  --app-ink:#E4EBF2;
+  --app-panel:#17222D;
+  --app-rule:#26333F;
+  --app-muted:#93A3B4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--app-bg);
+  color:var(--app-ink);
+  font-family:'Inter',system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  overflow:hidden;
+}
+#viewport{position:fixed;inset:0;display:grid;place-items:center;overflow:hidden}
+#stage{
+  width:1280px;height:720px;position:relative;
+  background:var(--canvas);
+  box-shadow:0 1px 2px rgba(20,60,95,0.08);
+  transform-origin:center center;
+  overflow:hidden;
+}
+
+/* ---------- slide shell ---------- */
+.slide{position:absolute;inset:0;display:none;background:var(--canvas);color:var(--ink)}
+.slide.active{display:block;animation:fadein .15s ease-out}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.slide::before{content:"";position:absolute;left:0;top:0;right:0;height:4px;background:var(--navy);z-index:3}
+.notes{display:none}
+
+.topbar{
+  position:absolute;left:56px;right:56px;top:18px;
+  display:flex;align-items:baseline;gap:12px;
+  padding-bottom:9px;border-bottom:1px solid var(--navy);
+}
+.tb-block{font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--navy);flex-shrink:0}
+.tb-sep{width:4px;height:4px;border-radius:50%;background:var(--teal);align-self:center;flex-shrink:0}
+.tb-unit{font-size:14px;font-weight:700;letter-spacing:.14em;color:var(--navy);flex:1;min-width:0;overflow:hidden;white-space:nowrap}
+.tb-unit .tb-code{color:var(--teal);margin-right:2px}
+.tb-num{font-size:14px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;flex-shrink:0}
+
+.body{position:absolute;left:56px;right:56px;top:72px;bottom:44px;display:flex;flex-direction:column}
+.slide.bare .body{top:52px;bottom:52px;left:64px;right:64px}
+.slide.bare .topbar{display:none}
+
+/* ---------- concept layout: title, diagram, one caption ---------- */
+.slide.t-concept .body{top:68px;bottom:34px}
+.slide.t-concept h1.title{font-size:34px;line-height:1.2}
+.slide.t-concept .visual{margin-top:10px}
+.slide.t-concept .caption{padding-top:11px;font-size:18px;line-height:1.38;max-width:100%}
+
+/* ---------- follow along / watch layout ---------- */
+.slide.t-follow .body{top:66px;bottom:34px}
+.slide.t-follow h1.title{font-size:36px;line-height:1.22}
+.shows{margin-top:12px;font-size:20px;line-height:1.35;color:var(--ink)}
+.shows .sl{
+  display:inline-block;margin-right:12px;font-size:13px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--teal);
+}
+.clickwrap{flex:1;min-height:0;display:flex;align-items:center}
+ol.clicks{list-style:none;counter-reset:c;display:flex;flex-direction:column;gap:16px;width:100%;max-width:1000px}
+ol.clicks li{
+  counter-increment:c;position:relative;padding-left:52px;font-size:23px;line-height:1.34;color:var(--ink);
+}
+ol.clicks li::before{
+  content:counter(c);position:absolute;left:0;top:-1px;width:32px;height:32px;border-radius:6px;
+  background:var(--teal-soft);color:var(--teal);font-size:16px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.watching{
+  margin-top:14px;font-size:16px;line-height:1.4;color:var(--muted);
+}
+.watching .wo{
+  display:inline-block;margin-right:11px;font-size:13px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--navy);
+}
+.slide.t-follow .watch{margin-top:auto;padding-top:16px}
+.slide.t-follow .watch .wt{font-size:20px}
+
+/* ---------- fixed deck chrome ---------- */
+#chrome-num{
+  display:none;position:absolute;right:64px;bottom:22px;z-index:4;
+  font-size:14px;font-weight:600;letter-spacing:.08em;color:var(--muted);
+  font-variant-numeric:tabular-nums;
+}
+#chrome-track{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--rule);z-index:4}
+#chrome-fill{display:block;height:100%;width:0;background:var(--teal)}
+#stage.no-chrome #chrome-num{display:none}
+#blank.on ~ #ctrlbar,#help.on ~ #ctrlbar,#overview.on ~ #ctrlbar,#units.on ~ #ctrlbar{display:none}
+
+/* ---------- type ---------- */
+.kicker{font-size:14px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--teal)}
+h1.title{font-size:42px;line-height:1.25;font-weight:700;color:var(--navy);max-width:100%;letter-spacing:-.006em;text-wrap:balance}
+.lede{font-size:23px;line-height:1.45;font-weight:400;color:var(--ink);max-width:58ch}
+.caption{
+  margin-top:auto;padding-top:15px;border-top:1px solid var(--rule);
+  font-size:20px;line-height:1.42;font-weight:400;color:var(--ink);max-width:104ch;
+}
+.caption b{color:var(--navy);font-weight:700}
+.caption.quote{border-top:none;border-left:3px solid var(--teal);padding:2px 0 2px 22px;margin-top:26px}
+.caption .src{display:block;margin-top:9px;font-size:15px;color:var(--muted)}
+.bigquote{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.bigquote p{font-size:28px;line-height:1.45;color:var(--ink);max-width:44ch;border-left:3px solid var(--teal);padding-left:28px}
+.bigquote .src{margin-top:22px;padding-left:31px;font-size:16px;color:var(--muted)}
+.spacer{flex:1;min-height:0}
+
+/* ---------- visual frame ---------- */
+.visual{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;margin-top:16px}
+.visual > svg{width:100%!important;height:100%!important;display:block}
+
+/* ---------- title slide ---------- */
+.slide.t-title .body{left:0;right:0;top:4px;bottom:0;flex-direction:row}
+.cover-left{flex:0 0 63%;padding:0 72px;display:flex;flex-direction:column;justify-content:center}
+.cover-left .kicker{margin-bottom:28px}
+.cover-left h1{font-size:58px;line-height:1.1;font-weight:700;color:var(--navy);max-width:11em;letter-spacing:-.015em;text-wrap:balance}
+.cover-left .subtitle{margin-top:24px;font-size:24px;line-height:1.45;color:var(--muted);max-width:22em}
+.cover-left .trule{margin-top:40px;width:64px;height:3px;background:var(--teal)}
+.cover-right{
+  flex:1;background:var(--panel);border-left:1px solid var(--rule);
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 52px;
+}
+.cover-right .dow{font-size:14px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--teal)}
+.cover-right .dnum{font-size:96px;line-height:1;font-weight:700;color:var(--navy);margin-top:10px;font-variant-numeric:tabular-nums}
+.cover-right .dmon{font-size:20px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--navy);margin-top:10px}
+.cover-right .dsep{width:56px;height:1px;background:var(--rule);margin:30px 0}
+.cover-right .dwho{font-size:19px;font-weight:600;color:var(--ink)}
+.cover-right .dorg{font-size:16px;color:var(--muted);margin-top:6px;letter-spacing:.06em}
+
+/* ---------- agenda ---------- */
+.timeline{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;margin-top:10px;max-width:980px}
+.t-row{display:grid;grid-template-columns:56px 86px 1fr 180px;align-items:baseline;gap:0 14px;padding:9px 0;border-top:1px solid var(--rule)}
+.t-row:last-child{border-bottom:1px solid var(--rule)}
+.t-row .ucode{font-size:20px;font-weight:700;color:var(--teal);font-variant-numeric:tabular-nums}
+.t-row .time{font-size:20px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
+.t-row .name{font-size:21px;font-weight:500;color:var(--ink);line-height:1.3}
+.t-row .kind{justify-self:start;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#fff;background:var(--teal);padding:4px 9px;border-radius:3px;white-space:nowrap}
+.t-row .kind.w{background:var(--navy)}
+.t-row .kind.none{background:transparent;padding:0}
+.t-row.is-end .ucode,.t-row.is-end .time,.t-row.is-end .name{color:var(--muted);font-weight:600}
+.t-row.is-break{padding:5px 0;background:var(--panel)}
+.t-row.is-break .ucode{color:var(--muted)}
+.t-row.is-break .time{font-size:15px;color:var(--muted)}
+.t-row.is-break .name{font-size:15px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+.slide.t-agenda h1.title{font-size:34px;line-height:1.2}
+
+/* ---------- divider ---------- */
+.div-head{display:flex;flex-direction:column;gap:10px}
+.div-head h1{font-size:40px;line-height:1.14;font-weight:700;color:var(--navy)}
+.slide.t-divider .visual{margin-top:14px}
+.unitstrip{
+  margin-top:12px;padding-top:11px;border-top:1px solid var(--rule);
+  font-size:16px;line-height:1.45;color:var(--muted);
+}
+
+/* ---------- lists ---------- */
+ul.blist{list-style:none;display:flex;flex-direction:column;gap:24px;max-width:52ch}
+ul.blist li{position:relative;padding-left:32px;font-size:23px;line-height:1.35;color:var(--ink)}
+ul.blist li::before{content:"";position:absolute;left:0;top:.56em;width:14px;height:2px;background:var(--teal)}
+.listwrap{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+
+/* ---------- big number ---------- */
+.bignum{display:flex;flex-direction:column;align-items:flex-start}
+.bignum .fig{font-size:112px;line-height:.95;font-weight:700;color:var(--navy);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.bignum .fig.sm{font-size:86px}
+.bignum .lab{margin-top:16px;font-size:16px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--teal)}
+.split{flex:1;min-height:0;display:flex;align-items:stretch;gap:76px;margin-top:16px}
+.split > .bignum{flex:0 0 auto;align-self:center}
+.split > .sp-right{flex:1;min-width:0;align-self:center}
+.split.stretch{gap:64px;margin-top:24px}
+.split > .sp-l{flex:1.12;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.split > .sp-r{flex:1;min-width:0;display:flex}
+
+
+/* ---------- table ---------- */
+.tblwrap{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;margin-top:16px}
+table.deck{border-collapse:collapse;width:100%;max-width:1060px}
+table.deck th{
+  text-align:left;font-size:15px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--teal);
+  padding:0 26px 12px 0;border-bottom:1px solid var(--navy);
+}
+table.deck td{font-size:22px;line-height:1.35;color:var(--ink);padding:18px 26px 18px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+table.deck td.k{font-weight:700;color:var(--navy);width:36%}
+table.deck.two td.k{width:50%}
+table.deck.two td{width:50%}
+table.deck.three td.k{width:19%;font-size:21px}
+table.deck.three td{font-size:21px;width:45%;padding:13px 24px 13px 0}
+table.deck.three td:last-child{width:36%}
+table.deck.three th{font-size:14px}
+.slide.t-recap .body{justify-content:flex-start}
+.listwrap ul.blist{margin-top:0}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;width:100%;max-width:1060px}
+.tile{
+  border:1px solid var(--rule);border-left:3px solid var(--teal);border-radius:8px;background:var(--panel);
+  padding:20px 22px;font-size:18px;font-weight:400;color:var(--ink);line-height:1.36;
+  display:flex;flex-direction:column;gap:7px;
+}
+.tile b{font-size:21px;font-weight:700;color:var(--navy);line-height:1.22}
+.tiles.two{grid-template-columns:repeat(2,1fr)}
+
+/* ---------- three figures in a row ---------- */
+.figrow{flex:1;min-height:0;display:flex;align-items:flex-start;gap:56px;margin-top:52px}
+.frc{flex:1;min-width:0}
+.frn{font-size:78px;line-height:.95;font-weight:700;color:var(--navy);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.frl{margin-top:14px;font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+.frt{margin-top:12px;font-size:19px;line-height:1.38;color:var(--ink)}
+
+/* ---------- LIVE ---------- */
+.tag{
+  display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:700;letter-spacing:.19em;
+  text-transform:uppercase;color:#fff;background:var(--teal);padding:7px 15px;border-radius:3px;
+  width:fit-content;margin-bottom:22px;
+}
+.tag .dot{width:7px;height:7px;border-radius:50%;background:#fff}
+.tag.watch{background:var(--navy)}
+.tag .ring{width:8px;height:8px;border-radius:50%;border:2px solid #fff}
+.tag .code{margin-left:11px;padding-left:11px;border-left:1px solid rgba(255,255,255,.45);letter-spacing:.14em}
+.tag.plain{background:transparent;color:var(--teal);padding:0;letter-spacing:.17em;font-size:14px;margin-bottom:16px}
+.promptwrap{flex:1;min-height:0;display:flex;align-items:center}
+.prompt{
+  width:100%;max-width:1060px;background:var(--panel);border:1px solid var(--rule);
+  border-left:5px solid var(--teal);border-radius:8px;padding:32px 40px;box-shadow:var(--shadow);
+}
+.prompt code{
+  display:block;font-family:'JetBrains Mono',ui-monospace,Consolas,'Courier New',monospace;
+  font-size:21px;line-height:1.6;color:var(--navy);white-space:pre-wrap;
+  -webkit-user-select:all;user-select:all;
+}
+.prompt.m code{font-size:20px;line-height:1.55}
+.prompt.l code{font-size:19px;line-height:1.5}
+.prompt.xs code{font-size:18px;line-height:1.45}
+.prompt code::selection{background:var(--teal-soft)}
+.prompt.slim{padding:16px 22px;box-shadow:none;max-width:100%;margin-top:14px}
+.slide.t-explain .prompt.slim{margin-top:auto}
+.slide.t-follow .prompt.slim{margin-top:18px}
+.prompt.slim code{font-size:20px;line-height:1.5}
+.watch{display:flex;align-items:baseline;gap:16px;padding-top:22px;margin-top:20px;border-top:1px solid var(--rule)}
+.watch .wl{font-size:14px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--teal);flex-shrink:0}
+.watch .wt{font-size:21px;line-height:1.4;color:var(--ink)}
+.attrib{margin-top:12px;font-size:15px;color:var(--muted)}
+
+/* ---------- task list ---------- */
+ol.tasks{list-style:none;counter-reset:t;display:flex;flex-direction:column;gap:22px;max-width:44ch}
+ol.tasks li{counter-increment:t;position:relative;padding-left:48px;font-size:23px;line-height:1.35;color:var(--ink)}
+ol.tasks li::before{
+  content:counter(t,upper-alpha);position:absolute;left:0;top:-2px;
+  width:32px;height:32px;border-radius:6px;background:var(--teal-soft);color:var(--teal);
+  font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;
+}
+.pairing{margin-top:auto;padding-top:22px;border-top:1px solid var(--rule);font-size:21px;color:var(--ink)}
+
+/* ---------- break + qa ---------- */
+.centerbox{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.centerbox .bignum{align-items:center}
+.centerbox .bignum .fig{font-size:156px}
+.centerbox .capline{margin-top:36px;font-size:24px;color:var(--ink)}
+.slide.t-qa h1{font-size:92px;line-height:1;font-weight:700;color:var(--navy);letter-spacing:-.02em}
+.slide.t-qa .qline{margin-top:40px;font-size:24px;line-height:1.5;color:var(--ink);max-width:54ch;border-left:3px solid var(--teal);padding-left:24px}
+.slide.t-qa .body{justify-content:center}
+
+/* ---------- statement ---------- */
+.statement{flex:1;min-height:0;display:flex;align-items:center}
+.statement p{font-size:26px;line-height:1.5;color:var(--ink);max-width:52ch}
+.rowcap{display:flex;margin-top:18px;padding-top:16px;border-top:1px solid var(--rule)}
+.rowcap div{flex:1;font-size:19px;line-height:1.35;color:var(--ink);padding-right:24px}
+.rowcap div + div{padding-left:26px;border-left:1px solid var(--rule)}
+
+/* ---------- overlays ---------- */
+#blank{position:absolute;inset:0;background:#0B131C;z-index:40;display:none}
+#blank.on{display:block}
+#help,#overview{position:absolute;inset:0;z-index:50;display:none;background:rgba(255,255,255,.97);padding:48px 56px;overflow:auto}
+#help.on,#overview.on{display:block}
+#help h2,#overview h2{font-size:26px;color:var(--navy);margin-bottom:24px;font-weight:700}
+#help dl{display:grid;grid-template-columns:230px 1fr;gap:16px 24px;font-size:20px;color:var(--ink)}
+#help dt{font-weight:700;color:var(--navy);font-family:'JetBrains Mono',monospace;font-size:16px}
+#ovgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+.ovcell{position:relative;border:1px solid var(--rule);border-radius:4px;overflow:hidden;background:#fff;cursor:pointer;aspect-ratio:16/9}
+.ovcell.cur{outline:2px solid var(--teal);outline-offset:1px}
+.ovcell .mini{width:1280px;height:720px;transform-origin:0 0;position:absolute;left:0;top:0;pointer-events:none}
+.ovcell .ovn{position:absolute;right:3px;bottom:2px;font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.9);padding:0 3px;border-radius:2px;z-index:2}
+
+/* ---------- notes panel ---------- */
+#notes{
+  position:fixed;top:0;right:0;bottom:0;width:400px;z-index:60;background:var(--app-panel);
+  border-left:1px solid var(--app-rule);padding:26px 28px;overflow:auto;display:none;color:var(--app-ink);
+}
+#notes.on{display:block}
+#notes h3{font-size:13px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--app-muted);margin-bottom:8px}
+#notes .nt{font-size:19px;font-weight:700;color:var(--app-ink);margin-bottom:18px;line-height:1.3}
+#notes .nb{font-size:15px;line-height:1.62;color:var(--app-ink);white-space:pre-wrap}
+
+/* ---------- on screen controls ---------- */
+#ctrlbar{
+  position:absolute;left:16px;bottom:4px;z-index:45;height:40px;
+  display:flex;align-items:center;gap:2px;padding:0 6px;
+  background:#fff;border:1px solid var(--rule);border-radius:8px;
+  box-shadow:0 1px 3px rgba(20,60,95,.10);
+  opacity:.7;transition:opacity .4s ease;
+}
+#ctrlbar:hover{opacity:1}
+#ctrlbar.idle{opacity:0;pointer-events:none}
+#ctrlbar button{
+  font-family:'Inter',system-ui,sans-serif;font-size:13px;font-weight:600;letter-spacing:.06em;
+  line-height:1;color:var(--navy);background:transparent;border:0;border-radius:6px;
+  padding:9px 12px;cursor:pointer;
+}
+#ctrlbar button:hover{background:var(--teal-soft);color:var(--teal)}
+#ctrlbar .cb-sep{width:1px;height:18px;background:var(--rule);margin:0 4px}
+.tb-unit{cursor:pointer}
+
+/* ---------- units panel ---------- */
+#units{position:absolute;inset:0;z-index:50;display:none;background:rgba(255,255,255,.975);padding:34px 48px 26px;overflow:auto}
+#units.on{display:block}
+#units h2{font-size:24px;color:var(--navy);margin-bottom:14px;font-weight:700}
+#units .ucols{column-count:1;max-width:1000px}
+#units .ugroup,#units .urow{break-inside:avoid}
+#units .ugroup{
+  font-size:12px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:var(--teal);
+  margin:14px 0 5px;
+}
+#units .ugroup.first{margin-top:0}
+#units .urow{
+  display:grid;grid-template-columns:44px 1fr 150px;gap:0 10px;align-items:baseline;
+  padding:5px 7px;border-top:1px solid var(--rule);cursor:pointer;border-radius:4px;
+}
+#units .urow:hover{background:var(--teal-soft)}
+#units .uc{font-size:14px;font-weight:700;color:var(--teal);font-variant-numeric:tabular-nums}
+#units .un{font-size:17px;line-height:1.3;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#units .un b{font-weight:700;color:var(--navy)}
+#units .us{font-size:14px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#units .urow.is-break .un b{color:var(--muted);letter-spacing:.06em}
+#units .uhint{margin-top:16px;font-size:13px;color:var(--muted)}
+
+/* ---------- n8n course additions ---------- */
+.prompt .pid{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--muted)}
+.prompt .pid b{font-size:13px;font-weight:700;letter-spacing:.12em;color:#fff;background:var(--teal);padding:2px 8px;border-radius:3px}
+.prompt.slim{padding:12px 20px 13px}
+.prompt.slim code{font-size:19px;line-height:1.45}
+.prompt.slim.m code{font-size:17px;line-height:1.45}
+.prompt.xs{padding:18px 26px}
+.prompt.xs code{font-size:15.5px;line-height:1.45}
+.pstack{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.pstack .prompt.slim{margin-top:0}
+.pstack.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:stretch}
+.pstack.grid3 .prompt.slim code{font-size:16.5px;line-height:1.42}
+.pe-row{display:flex;align-items:baseline;gap:24px}
+.pe-row code{flex:1;min-width:0}
+.pe-row .exp{flex:0 0 330px;font-size:17px;line-height:1.35;color:var(--ink);border-left:2px solid var(--rule);padding-left:16px}
+.pe-row .exp span{display:block;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:3px}
+.slide.t-follow .clickwrap{flex:0 0 auto;margin-top:16px}
+.slide.t-follow ol.clicks{gap:11px}
+.slide.t-follow ol.clicks li{font-size:21px;line-height:1.32;padding-left:46px}
+.slide.t-follow ol.clicks li::before{width:28px;height:28px;font-size:14px;top:0}
+.slide.t-follow .shows{font-size:19px}
+.slide.t-follow .promptwrap{flex:0 1 auto;margin-top:14px}
+.path{margin-top:14px;display:flex;align-items:baseline;gap:12px;font-size:19px;color:var(--navy);font-weight:600}
+.path .pl{font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--teal)}
+.chain{display:flex;align-items:stretch;gap:44px;margin-top:18px}
+.chain .cb{position:relative;flex:1;min-width:0;border:1px solid var(--rule);border-left:3px solid var(--teal);border-radius:8px;background:var(--panel);padding:12px 16px}
+.chain .cb b{display:block;font-size:18px;font-weight:700;color:var(--navy);line-height:1.25}
+.chain .cb span{display:block;margin-top:4px;font-size:15px;line-height:1.35;color:var(--muted)}
+.chain .cb + .cb::before{content:"";position:absolute;left:-38px;top:50%;width:28px;height:2px;background:var(--navy)}
+.chain .cb + .cb::after{content:"";position:absolute;left:-14px;top:calc(50% - 5px);border-left:8px solid var(--navy);border-top:6px solid transparent;border-bottom:6px solid transparent}
+.links{display:flex;gap:24px;margin-top:auto;padding-top:18px;border-top:1px solid var(--rule)}
+.links .lk{flex:1;display:flex;align-items:baseline;gap:14px}
+.links .lk span{font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--teal)}
+.links .lk code{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:20px;color:var(--navy)}
+.slide.t-close ol.clicks{max-width:1000px;gap:22px}
+.slide.t-close ol.clicks li{font-size:25px}
+.slide.t-close .clickwrap{flex:1;min-height:0;display:flex;align-items:center}
+.figrow.two{gap:96px}
+.dgm-missing{flex:1;align-self:stretch;border:1.5px dashed #BFCBD8;border-radius:8px;background:var(--panel);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted)}
+.tiles.two .tile{padding:22px 26px}
+</style>
+</head>
+<body>
+<div id="viewport">
+<div id="stage">
+<section class="slide t-title bare" data-slide="1" data-unit="1.1" data-purpose="title" data-title="2023'ten 2026'ya: Belgelerinden Cevap Veren Asistan" data-nochrome><div class="body"><div class="cover-left"><div class="kicker">Follow along eğitim · online</div><h1>2023'ten 2026'ya: Belgelerinden Cevap Veren Asistan</h1><p class="subtitle">n8n'de bir asistanı klasik RAG'den agentic RAG'e birlikte büyütüyoruz</p><div class="trule"></div></div><div class="cover-right"><div class="dow">Pazar · 11:00</div><div class="dnum">27</div><div class="dmon">Eylül 2026</div><div class="dsep"></div><div class="dwho">Burak Can Polat</div><div class="dorg">Edulitix</div></div></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="2" data-unit="1.1" data-purpose="watch" data-title="Önce sonuç: bitmiş asistan cevabın kaynağını da söylüyor."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.1</span> · AÇILIŞ</span><span class="tb-num">2</span></div><div class="body"><div class="tag watch"><span class="ring"></span>Watch<span class="code">1.1</span></div><h1 class="title">Önce sonuç: bitmiş asistan cevabın kaynağını da söylüyor.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Henüz hiçbir şey. 12:15'te elinizde olacak asistanı görüyoruz.</p><div class="promptwrap"><div class="prompt m"><div class="pid"><b>P1</b><span>n8n chat (03-context)</span></div><code data-pid="P1">Elektrikli bisikleti Alsancak şubesinden alıp Karşıyaka şubesine bırakırsam, bir günlük kiralama toplam kaç TL tutar?</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Cevabın sonundaki iki kaynak etiketi</span></div><p class="watching"><span class="wo">Sadece izle</span>Bu gösterim 20 saniye sürüyor; kurulum 1.2'de başlıyor.</p></div><aside class="notes"></aside></section>
+<section class="slide t-explain" data-slide="3" data-unit="1.1" data-purpose="explain" data-title="Bugün İmbat Pedal'ın altı belgesine cevap veren asistanı kuruyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.1</span> · AÇILIŞ</span><span class="tb-num">3</span></div><div class="body"><h1 class="title">Bugün İmbat Pedal'ın altı belgesine cevap veren asistanı kuruyoruz.</h1><div class="figrow"><div class="frc"><div class="frn">4</div><div class="frl">şube</div><div class="frt">Alsancak, Karşıyaka, Bostanlı, Göztepe</div></div><div class="frc"><div class="frn">6</div><div class="frl">belge</div><div class="frt">Kiralama, fiyat, iptal ve iade, hasar, şubeler, SSS</div></div><div class="frc"><div class="frn">10</div><div class="frl">test sorusu</div><div class="frt">Beklenen cevap ve kaynak belgesiyle, kitte</div></div></div><p class="caption">İmbat Pedal kurgusaldır. Belgelerde kişisel veri, adres ve telefon yok, çünkü ücretsiz Gemini katmanına gönderilen içerik ürün geliştirmede kullanılabilir.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="4" data-unit="1.1" data-purpose="concept" data-title="Aynı asistanı bugün 2023'ten 2026'ya yürütüyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.1</span> · AÇILIŞ</span><span class="tb-num">4</span></div><div class="body"><h1 class="title">Aynı asistanı bugün 2023'ten 2026'ya yürütüyoruz.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d01-s4" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Evrim zaman çizelgesi: 2023 sabit hat, 2024 hibrit arama ve rerank, 2025 context engineering ve agentic arama, 2026 indeks bir araç; her durağın altında onu işlediğimiz ünite.</title>
+<defs><marker id="ar-d01-s4" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d01-t-s4" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d01-w-s4" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d01-g-s4" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d01-s4{width:100%;height:auto;display:block}
+#d01-s4 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d01-s4 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d01-s4 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d01-s4 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d01-s4 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d01-s4 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d01-s4 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d01-s4 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d01-s4 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d01-s4 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d01-s4 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d01-s4 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d01-s4 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d01-s4 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d01-s4 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d01-s4 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d01-s4 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d01-s4 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d01-s4 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d01-s4 .dash{stroke-dasharray:7 6}
+#d01-s4 .dot{fill:#16365C}
+#d01-s4 .dotl{fill:#0E7490}
+#d01-s4 .dotw{fill:#B45309}
+</style>
+<text x="60" y="80" class="h" text-anchor="start">Aynı soru, üç yıl</text>
+<path d="M110 290H1100" class="ln" marker-end="url(#ar-d01-s4)"/>
+<circle cx="170" cy="290" r="13" class="box"/>
+<text x="170" y="252" class="h" text-anchor="middle">2023</text>
+<text x="170" y="352" text-anchor="middle"><tspan x="170" dy="0" class="lb">Sabit hat</tspan><tspan x="170" dy="28" class="m">her soruda 4 parça</tspan></text>
+<circle cx="450" cy="290" r="13" class="box"/>
+<text x="450" y="252" class="h" text-anchor="middle">2024</text>
+<text x="450" y="352" text-anchor="middle"><tspan x="450" dy="0" class="lb">Hibrit arama</tspan><tspan x="450" dy="28" class="lb">ve rerank</tspan></text>
+<circle cx="730" cy="290" r="13" class="box"/>
+<text x="730" y="252" class="h" text-anchor="middle">2025</text>
+<text x="730" y="352" text-anchor="middle"><tspan x="730" dy="0" class="lb">Context engineering</tspan><tspan x="730" dy="28" class="lb">ve agentic arama</tspan></text>
+<circle cx="1010" cy="290" r="13" class="lit"/>
+<text x="1010" y="252" class="h" text-anchor="middle">2026</text>
+<text x="1010" y="352" text-anchor="middle"><tspan x="1010" dy="0" class="acc">İndeks bir araç</tspan><tspan x="1010" dy="28" class="m">yanında grep, long</tspan><tspan x="1010" dy="28" class="m">context, managed RAG</tspan></text>
+<path d="M170 470V500" class="hair"/>
+<rect x="110" y="500" width="120" height="50" rx="6" class="panel"/>
+<text x="170" y="532" class="mono lb" text-anchor="middle">1.3</text>
+<path d="M450 470V484H730V470M590 484V500" class="hair"/>
+<rect x="500" y="500" width="180" height="50" rx="6" class="panel"/>
+<text x="590" y="532" class="mono lb" text-anchor="middle">1.4 geçiş</text>
+<path d="M1010 470V500" class="hair"/>
+<rect x="880" y="500" width="260" height="50" rx="6" class="lit"/>
+<text x="1010" y="532" class="mono acc" text-anchor="middle">1.5, 1.6, 1.7</text>
+</svg>
+</div><p class="caption">2023'te sabit bir hat, 2026'da aramaya kendisi karar veren bir agent. Her durağın altında onu kurduğumuz ünite.</p></div><aside class="notes"></aside></section>
+<section class="slide t-agenda" data-slide="5" data-unit="1.1" data-purpose="agenda" data-title="Doksan dakika, sekiz ünite; beşini benimle birlikte yapıyorsunuz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.1</span> · AÇILIŞ</span><span class="tb-num">5</span></div><div class="body"><h1 class="title">Doksan dakika, sekiz ünite; beşini benimle birlikte yapıyorsunuz.</h1><div class="timeline"><div class="t-row"><div class="ucode">1.1</div><div class="time">11:00</div><div class="name">Açılış</div><span class="kind none"></span></div><div class="t-row"><div class="ucode">1.2</div><div class="time">11:05</div><div class="name">n8n turu: ilk agent</div><span class="kind">Follow along</span></div><div class="t-row"><div class="ucode">1.3</div><div class="time">11:13</div><div class="name">Klasik RAG (2023)</div><span class="kind">Follow along</span></div><div class="t-row"><div class="ucode">1.4</div><div class="time">11:27</div><div class="name">Ne değişti</div><span class="kind none"></span></div><div class="t-row"><div class="ucode">1.5</div><div class="time">11:33</div><div class="name">Agentic (2026)</div><span class="kind">Follow along</span></div><div class="t-row"><div class="ucode">1.6</div><div class="time">11:47</div><div class="name">Context engineering</div><span class="kind">Follow along</span></div><div class="t-row"><div class="ucode">1.7</div><div class="time">11:59</div><div class="name">Yeni yapılar</div><span class="kind w">Watch</span></div><div class="t-row"><div class="ucode">1.8</div><div class="time">12:15</div><div class="name">Ölçüm ve kapanış</div><span class="kind">Follow along</span></div><div class="t-row is-end"><div class="ucode"></div><div class="time">12:30</div><div class="name">Bitiş</div><span class="kind none"></span></div></div><p class="caption">Follow along: n8n'in açıksa kendi kopyanda benimle yap, kimse beklenmez. Watch: yalnız ben yaparım. Ara yok, saatler Türkiye saati.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="6" data-unit="1.2" data-purpose="concept" data-title="n8n bir tuval: tetikleyici başlatır, agent yuvalarına takılanla çalışır."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.2</span> · n8n TURU</span><span class="tb-num">6</span></div><div class="body"><h1 class="title">n8n bir tuval: tetikleyici başlatır, agent yuvalarına takılanla çalışır.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d02-s6" width="100%" viewBox="0 0 1200 675" role="img">
+<title>n8n ekran anatomisi: Canvas, tetikleyici Chat Trigger, AI Agent ve üç yuvası, Chat paneli, Executions ve Credentials.</title>
+<defs><marker id="ar-d02-s6" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d02-t-s6" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d02-w-s6" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d02-g-s6" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d02-s6{width:100%;height:auto;display:block}
+#d02-s6 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d02-s6 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d02-s6 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d02-s6 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d02-s6 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d02-s6 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d02-s6 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d02-s6 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d02-s6 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d02-s6 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d02-s6 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d02-s6 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d02-s6 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d02-s6 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d02-s6 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d02-s6 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d02-s6 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d02-s6 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d02-s6 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d02-s6 .dash{stroke-dasharray:7 6}
+#d02-s6 .dot{fill:#16365C}
+#d02-s6 .dotl{fill:#0E7490}
+#d02-s6 .dotw{fill:#B45309}
+</style>
+<rect x="40" y="40" width="1120" height="600" rx="12" class="box"/>
+<path d="M40 100H1160" class="hair"/>
+<path d="M230 100V640" class="hair"/>
+<rect x="470" y="54" width="120" height="36" rx="6" class="panel"/>
+<text x="530" y="79" class="m" text-anchor="middle">Editor</text>
+<rect x="610" y="54" width="160" height="36" rx="6" class="lit"/>
+<text x="690" y="79" class="acc" text-anchor="middle">Executions</text>
+<rect x="56" y="126" width="158" height="124" rx="8" class="panel"/>
+<text x="135" y="164" text-anchor="middle"><tspan x="135" dy="0" class="lb">Credentials</tspan><tspan x="135" dy="26" class="m">anahtar bir kez</tspan><tspan x="135" dy="26" class="m">kaydedilir</tspan></text>
+<text x="254" y="138" class="m" text-anchor="start">Canvas</text>
+<rect x="270" y="196" width="220" height="90" rx="8" class="box"/>
+<text x="380" y="234" text-anchor="middle"><tspan x="380" dy="0" class="lb">Chat Trigger</tspan><tspan x="380" dy="28" class="m">tetikleyici</tspan></text>
+<path d="M492 241H566" class="ln" marker-end="url(#ar-d02-s6)"/>
+<rect x="570" y="186" width="260" height="110" rx="8" class="lit"/>
+<text x="700" y="248" text-anchor="middle"><tspan x="700" dy="0" class="h">AI Agent</tspan></text>
+<path d="M620 296V326H535 V352" class="ln"/>
+<circle cx="620" cy="296" r="5" class="dot"/>
+<rect x="460" y="352" width="150" height="54" rx="8" class="box"/>
+<text x="535" y="386" text-anchor="middle"><tspan x="535" dy="0" class="l">Chat Model</tspan></text>
+<path d="M700 296V326H700 V352" class="ln"/>
+<circle cx="700" cy="296" r="5" class="dot"/>
+<rect x="625" y="352" width="150" height="54" rx="8" class="box"/>
+<text x="700" y="386" text-anchor="middle"><tspan x="700" dy="0" class="l">Memory</tspan></text>
+<path d="M780 296V326H865 V352" class="ln"/>
+<circle cx="780" cy="296" r="5" class="dot"/>
+<rect x="790" y="352" width="150" height="54" rx="8" class="box"/>
+<text x="865" y="386" text-anchor="middle"><tspan x="865" dy="0" class="l">Tool</tspan></text>
+<rect x="248" y="450" width="890" height="172" rx="8" class="panel"/>
+<text x="272" y="486" class="lb" text-anchor="start">Chat paneli</text>
+<rect x="272" y="504" width="420" height="36" rx="18" class="box"/>
+<rect x="560" y="552" width="420" height="36" rx="18" class="lit"/>
+<path d="M1100 448V120H774" class="tl" marker-end="url(#ar-d02-t-s6)"/>
+<text x="1084" y="176" class="accm" text-anchor="end">her çalıştırma bir kayıt</text>
+</svg>
+</div><p class="caption">Chat Model ile düşünür, Memory ile hatırlar, Tool ile kullanır. Her çalıştırma Executions'ta iz bırakır; bugün en çok oraya bakacağız.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="7" data-unit="1.2" data-purpose="follow" data-title="İlk agent'ımızı kuruyoruz; İmbat Pedal'ı henüz tanımıyor."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.2</span> · n8n TURU</span><span class="tb-num">7</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.2</span></div><h1 class="title">İlk agent'ımızı kuruyoruz; İmbat Pedal'ı henüz tanımıyor.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Imbat Asistan: Chat Trigger, AI Agent, Google Gemini Chat Model</p><div class="clickwrap"><ol class="clicks"><li>Yeni workflow Imbat Asistan; ilk adım Chat Trigger, sağında + ile AI Agent</li><li>Chat Model yuvası, +, Google Gemini Chat Model</li><li>Credential: API Key alanına Google AI Studio anahtarın, Save</li><li>Model: listedeki güncel Flash modeli; kaydet, Open chat</li></ol></div><div class="pstack"><div class="prompt slim "><div class="pid"><b>P2</b><span>n8n chat</span></div><code data-pid="P2">İmbat Pedal'da elektrikli bisikletin günlük kiralama ücreti ne kadar?</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Cevap geliyor ama işe yaramıyor: kaynak yok</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>Model yalnız eğitildiği şeyi biliyor; İmbat Pedal onun masasında yok.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="8" data-unit="1.3" data-purpose="concept" data-title="2023 tarifi iki hat: önce yükle, sonra her soruda getir."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.3</span> · KLASİK RAG (2023)</span><span class="tb-num">8</span></div><div class="body"><h1 class="title">2023 tarifi iki hat: önce yükle, sonra her soruda getir.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d03-s8" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Klasik RAG iki hat: yükleme hattı belgeleri parçalar, embedding'e çevirir, depoya koyar; sorgu hattı soruyu aynı embedding ile çevirip en yakın 4 parçayı zincire verir.</title>
+<defs><marker id="ar-d03-s8" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d03-t-s8" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d03-w-s8" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d03-g-s8" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d03-s8{width:100%;height:auto;display:block}
+#d03-s8 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d03-s8 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d03-s8 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d03-s8 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d03-s8 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d03-s8 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d03-s8 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d03-s8 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d03-s8 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d03-s8 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d03-s8 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d03-s8 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d03-s8 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d03-s8 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d03-s8 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d03-s8 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d03-s8 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d03-s8 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d03-s8 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d03-s8 .dash{stroke-dasharray:7 6}
+#d03-s8 .dot{fill:#16365C}
+#d03-s8 .dotl{fill:#0E7490}
+#d03-s8 .dotw{fill:#B45309}
+</style>
+<text x="60" y="100" class="h" text-anchor="start">Yükleme</text>
+<rect x="60" y="130" width="230" height="96" rx="8" class="box"/>
+<text x="175" y="171" text-anchor="middle"><tspan x="175" dy="0" class="lb">Belgeler</tspan><tspan x="175" dy="28" class="m">6 dosya</tspan></text>
+<rect x="350" y="130" width="230" height="96" rx="8" class="box"/>
+<text x="465" y="171" text-anchor="middle"><tspan x="465" dy="0" class="lb">Parçala</tspan><tspan x="465" dy="28" class="mono m">800 / 150</tspan></text>
+<rect x="640" y="130" width="230" height="96" rx="8" class="warnbox"/>
+<text x="755" y="185" text-anchor="middle"><tspan x="755" dy="0" class="lb">Embedding</tspan></text>
+<rect x="930" y="130" width="230" height="96" rx="8" class="lit"/>
+<text x="1045" y="171" text-anchor="middle"><tspan x="1045" dy="0" class="lb">Simple Vector</tspan><tspan x="1045" dy="28" class="lb">Store: imbat_kb</tspan></text>
+<path d="M292 178H346" class="ln" marker-end="url(#ar-d03-s8)"/>
+<path d="M582 178H636" class="ln" marker-end="url(#ar-d03-s8)"/>
+<path d="M872 178H926" class="ln" marker-end="url(#ar-d03-s8)"/>
+<text x="60" y="380" class="h" text-anchor="start">Sorgu</text>
+<rect x="60" y="410" width="188" height="96" rx="8" class="box"/>
+<text x="154" y="465" text-anchor="middle"><tspan x="154" dy="0" class="lb">Soru</tspan></text>
+<rect x="288" y="410" width="188" height="96" rx="8" class="warnbox"/>
+<text x="382" y="451" text-anchor="middle"><tspan x="382" dy="0" class="lb">Aynı</tspan><tspan x="382" dy="28" class="lb">embedding</tspan></text>
+<rect x="516" y="410" width="188" height="96" rx="8" class="box"/>
+<text x="610" y="451" text-anchor="middle"><tspan x="610" dy="0" class="lb">En yakın</tspan><tspan x="610" dy="28" class="lb">4 parça</tspan></text>
+<rect x="744" y="410" width="188" height="96" rx="8" class="box"/>
+<text x="838" y="451" text-anchor="middle"><tspan x="838" dy="0" class="lb">Question and</tspan><tspan x="838" dy="28" class="lb">Answer Chain</tspan></text>
+<rect x="972" y="410" width="188" height="96" rx="8" class="box"/>
+<text x="1066" y="465" text-anchor="middle"><tspan x="1066" dy="0" class="lb">Cevap</tspan></text>
+<path d="M250 458H284" class="ln" marker-end="url(#ar-d03-s8)"/>
+<path d="M478 458H512" class="ln" marker-end="url(#ar-d03-s8)"/>
+<path d="M706 458H740" class="ln" marker-end="url(#ar-d03-s8)"/>
+<path d="M934 458H968" class="ln" marker-end="url(#ar-d03-s8)"/>
+<path d="M1045 228V300H640V406" class="tl" marker-end="url(#ar-d03-t-s8)"/>
+<path d="M700 228V270H382V406" class="warnln dash"/>
+<text x="60" y="580" class="wn" text-anchor="start">Aynı model, iki tarafta: model değişirse her şey yeniden yüklenir.</text>
+</svg>
+</div><p class="caption">Açık kitap sınavı gibi: model yalnız eline verilen dört parçaya bakar. Kural: iki hatta aynı embedding modeli.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="9" data-unit="1.3" data-purpose="concept" data-title="Embedding anlamı yakalar; kodları ve tam adları kelime araması bulur."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.3</span> · KLASİK RAG (2023)</span><span class="tb-num">9</span></div><div class="body"><h1 class="title">Embedding anlamı yakalar; kodları ve tam adları kelime araması bulur.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d04-s9" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Parça, embedding, yakınlık: her parça anlam haritasında bir nokta; iade süresi ile param hesabıma geçer yakın, Karşıyaka pazar saatleri uzak; KB-204 gibi kodlar kelime işi.</title>
+<defs><marker id="ar-d04-s9" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d04-t-s9" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d04-w-s9" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d04-g-s9" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d04-s9{width:100%;height:auto;display:block}
+#d04-s9 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d04-s9 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d04-s9 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d04-s9 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d04-s9 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d04-s9 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d04-s9 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d04-s9 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d04-s9 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d04-s9 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d04-s9 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d04-s9 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d04-s9 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d04-s9 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d04-s9 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d04-s9 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d04-s9 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d04-s9 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d04-s9 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d04-s9 .dash{stroke-dasharray:7 6}
+#d04-s9 .dot{fill:#16365C}
+#d04-s9 .dotl{fill:#0E7490}
+#d04-s9 .dotw{fill:#B45309}
+</style>
+<rect x="50" y="50" width="720" height="575" rx="10" class="panel"/>
+<text x="74" y="88" class="m" text-anchor="start">Anlam haritası</text>
+<path d="M230 110V600" class="hair"/>
+<path d="M410 110V600" class="hair"/>
+<path d="M590 110V600" class="hair"/>
+<path d="M70 230H750" class="hair"/>
+<path d="M70 370H750" class="hair"/>
+<path d="M70 510H750" class="hair"/>
+<ellipse cx="285" cy="302" rx="210" ry="96" class="lit"/>
+<circle cx="170" cy="272" r="9" class="dotl"/>
+<text x="188" y="279" class="lb" text-anchor="start">iade süresi</text>
+<circle cx="200" cy="332" r="9" class="dotl"/>
+<text x="218" y="339" class="lb" text-anchor="start">param hesabıma geçer</text>
+<text x="84" y="432" class="accm" text-anchor="start">yakın: anlamca benzer</text>
+<circle cx="640" cy="548" r="9" class="dot"/>
+<text x="622" y="555" class="lb" text-anchor="end">Karşıyaka pazar saatleri</text>
+<path d="M230 352L628 540" class="gl dash"/>
+<text x="482" y="448" class="m" text-anchor="start">uzak</text>
+<circle cx="660" cy="150" r="9" class="dotw"/>
+<text x="642" y="157" class="mono lb" text-anchor="end">KB-204</text>
+<text x="660" y="196" class="wn" text-anchor="middle">kodlar kelime işi</text>
+<rect x="810" y="70" width="340" height="150" rx="10" class="box"/>
+<text x="834" y="116" text-anchor="start"><tspan x="834" dy="0" class="lb">Her parça bir nokta</tspan><tspan x="834" dy="28" class="m">embedding = anlam</tspan><tspan x="834" dy="28" class="m">koordinatı</tspan></text>
+<rect x="810" y="250" width="340" height="130" rx="10" class="lit"/>
+<text x="834" y="304" text-anchor="start"><tspan x="834" dy="0" class="acc">yakınlık = anlam</tspan><tspan x="834" dy="30" class="acc">benzerliği (cosine)</tspan></text>
+<rect x="810" y="410" width="340" height="150" rx="10" class="warnbox"/>
+<text x="834" y="456" text-anchor="start"><tspan x="834" dy="0" class="wn">Aynı model, iki tarafta</tspan><tspan x="834" dy="28" class="m">model değişirse her şey</tspan><tspan x="834" dy="28" class="m">yeniden yüklenir</tspan></text>
+</svg>
+</div><p class="caption">Her parçanın başında belge ve bölüm adı var: yırtılmış bir sayfa hangi kitaptan geldiğini bilmez.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="10" data-unit="1.3" data-purpose="follow" data-title="Hazır 2023 hattını içe aktarıp altı belgeyi depoya yüklüyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.3</span> · KLASİK RAG (2023)</span><span class="tb-num">10</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.3</span></div><h1 class="title">Hazır 2023 hattını içe aktarıp altı belgeyi depoya yüklüyoruz.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>01-klasik-rag: yükleme hattı, sorgu zinciri ve imbat_kb deposu</p><div class="clickwrap"><ol class="clicks"><li>Yeni workflow, sağ üst menü, dosyadan içe aktar: workflows/01-klasik-rag.json</li><li>Üç Gemini node'unda 1.2'deki credential; model alanlarına dokunma</li><li>Ayarlara bak: Memory Key imbat_kb, Chunk Size 800, Chunk Overlap 150</li><li>Belgeleri yükle node'undan çalıştır, parça sayısına bak</li></ol></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Her parça "Belge: ... | Bölüm: ..." satırıyla başlıyor</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>Bu hat bir kez çalışır: belgeleri parçalar, embedding'e çevirir, depoya koyar.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="11" data-unit="1.3" data-purpose="follow" data-title="2023 zinciri cevap veriyor, ama kaynağını söylemiyor."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.3</span> · KLASİK RAG (2023)</span><span class="tb-num">11</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.3</span></div><h1 class="title">2023 zinciri cevap veriyor, ama kaynağını söylemiyor.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Question and Answer Chain: her soruda en yakın 4 parça</p><div class="clickwrap"><ol class="clicks"><li>Aynı workflow'da Open chat; sırayla P2, P3, P4</li><li>Executions, son sohbet çalıştırması, Vector Store Retriever</li></ol></div><div class="pstack grid3"><div class="prompt slim m"><div class="pid"><b>P2</b><span>n8n chat</span></div><code data-pid="P2">İmbat Pedal'da elektrikli bisikletin günlük kiralama ücreti ne kadar?</code></div><div class="prompt slim m"><div class="pid"><b>P3</b><span>n8n chat</span></div><code data-pid="P3">iptal edersem param ne zaman hesabima gecer</code></div><div class="prompt slim m"><div class="pid"><b>P4</b><span>n8n chat</span></div><code data-pid="P4">Tekne de kiralıyor musunuz?</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Soru ne olursa olsun tam 4 parça geliyor</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>Her soruda tek arama, 4 parça; cevapta belge adı yok.</p></div><aside class="notes"></aside></section>
+<section class="slide t-explain" data-slide="12" data-unit="1.3" data-purpose="transition" data-title="Çalışıyor ama sabit: tek arama, kaynak yok, &quot;bilmiyorum&quot; yok."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.3</span> · KLASİK RAG (2023)</span><span class="tb-num">12</span></div><div class="body"><h1 class="title">Çalışıyor ama sabit: tek arama, kaynak yok, "bilmiyorum" yok.</h1><div class="tblwrap"><div class="tiles"><div class="tile"><b>Tek ve sabit arama</b>Her soruda aynı 4 parça. 2026'da agent ne zaman ve neyi arayacağına karar verir (1.5).</div><div class="tile"><b>Kaynak yok</b>Cevapta belge adı yok. 2026'da her cevabın sonunda kaynak etiketi (1.6).</div><div class="tile"><b>"Bilmiyorum" yok</b>Belgede olmayanı ayırt edemiyor. 2026'da kalıp cümle: "Bu bilgi belgelerimizde yok." (1.6)</div></div></div><p class="caption">Hafızası da yok: takip sorusunda hangi bisikleti sorduğumuzu bilmez.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="13" data-unit="1.4" data-purpose="concept" data-title="İndeks ölmedi: 2026'da agent'ın araçlarından biri oldu."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.4</span> · NE DEĞİŞTİ</span><span class="tb-num">13</span></div><div class="body"><h1 class="title">İndeks ölmedi: 2026'da agent'ın araçlarından biri oldu.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d05-s13" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Hattan agent'a: 2023'te her soruda tek arama; 2026'da aynı imbat_kb deposu agent'ın araçlarından biri, yanında web_arama ve MCP.</title>
+<defs><marker id="ar-d05-s13" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d05-t-s13" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d05-w-s13" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d05-g-s13" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d05-s13{width:100%;height:auto;display:block}
+#d05-s13 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d05-s13 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d05-s13 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d05-s13 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d05-s13 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d05-s13 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d05-s13 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d05-s13 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d05-s13 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d05-s13 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d05-s13 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d05-s13 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d05-s13 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d05-s13 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d05-s13 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d05-s13 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d05-s13 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d05-s13 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d05-s13 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d05-s13 .dash{stroke-dasharray:7 6}
+#d05-s13 .dot{fill:#16365C}
+#d05-s13 .dotl{fill:#0E7490}
+#d05-s13 .dotw{fill:#B45309}
+</style>
+<rect x="40" y="50" width="380" height="500" rx="10" class="panel"/>
+<text x="64" y="92" class="lb" text-anchor="start">2023: her soruda tek arama</text>
+<rect x="90" y="130" width="280" height="76" rx="8" class="box"/>
+<text x="230" y="175" text-anchor="middle"><tspan x="230" dy="0" class="lb">Soru</tspan></text>
+<rect x="90" y="262" width="280" height="90" rx="8" class="box"/>
+<text x="230" y="300" text-anchor="middle"><tspan x="230" dy="0" class="mono lb">imbat_kb</tspan><tspan x="230" dy="28" class="m">her zaman 4 parça</tspan></text>
+<rect x="90" y="408" width="280" height="76" rx="8" class="box"/>
+<text x="230" y="453" text-anchor="middle"><tspan x="230" dy="0" class="lb">Cevap</tspan></text>
+<path d="M230 208V258" class="ln" marker-end="url(#ar-d05-s13)"/>
+<path d="M230 354V404" class="ln" marker-end="url(#ar-d05-s13)"/>
+<rect x="540" y="50" width="620" height="500" rx="10" class="panel"/>
+<text x="564" y="92" class="lb" text-anchor="start">2026: agent karar verir</text>
+<rect x="720" y="130" width="260" height="96" rx="8" class="lit"/>
+<text x="850" y="185" text-anchor="middle"><tspan x="850" dy="0" class="h">Agent</tspan></text>
+<rect x="560" y="380" width="180" height="80" rx="8" class="lit"/>
+<text x="650" y="427" text-anchor="middle"><tspan x="650" dy="0" class="mono lb">belge_arama</tspan></text>
+<rect x="760" y="380" width="180" height="80" rx="8" class="box"/>
+<text x="850" y="427" text-anchor="middle"><tspan x="850" dy="0" class="mono lb">web_arama</tspan></text>
+<rect x="960" y="380" width="180" height="80" rx="8" class="box dash"/>
+<text x="1050" y="427" text-anchor="middle"><tspan x="1050" dy="0" class="lb">MCP (1.7)</tspan></text>
+<path d="M790 230V300H650V376" class="ln" marker-start="url(#ar-d05-s13)" marker-end="url(#ar-d05-s13)"/>
+<path d="M850 230V376" class="ln" marker-start="url(#ar-d05-s13)" marker-end="url(#ar-d05-s13)"/>
+<path d="M910 230V300H1050V376" class="gl dash" marker-start="url(#ar-d05-g-s13)" marker-end="url(#ar-d05-g-s13)"/>
+<path d="M372 307H480V420H556" class="tl" marker-end="url(#ar-d05-t-s13)"/>
+<text x="480" y="292" class="accm" text-anchor="middle">aynı depo</text>
+<rect x="40" y="585" width="1120" height="60" rx="30" class="lit"/>
+<text x="600" y="622" class="acc" text-anchor="middle">long context · grep · managed RAG da select</text>
+</svg>
+</div><p class="caption">2023: her soruda tek ve sabit arama. 2026: agent ne zaman, neyi, kaç kez arayacağına kendisi karar verir.</p></div><aside class="notes"></aside></section>
+<section class="slide t-explain" data-slide="14" data-unit="1.4" data-purpose="explain" data-title="Masaya bilgi getirmenin artık dört yolu var."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.4</span> · NE DEĞİŞTİ</span><span class="tb-num">14</span></div><div class="body"><h1 class="title">Masaya bilgi getirmenin artık dört yolu var.</h1><div class="tblwrap"><div class="tiles two"><div class="tile"><b>İndeks</b>Anlamca ara, en yakın parçaları getir</div><div class="tile"><b>Long context</b>Belgelerin hepsini masaya koy</div><div class="tile"><b>Grep</b>Kelimeyle ara, gereken satırı oku</div><div class="tile"><b>Managed RAG</b>Aramayı bir servise bırak, örneğin Gemini File Search</div></div></div><p class="caption">Altı belgemiz birkaç bin token: hepsini masaya koymak da yeter. İndeks, binlerce dosyalı ve sık değişen arşivde kendini öder.</p></div><aside class="notes"></aside></section>
+<section class="slide t-explain" data-slide="15" data-unit="1.4" data-purpose="transition" data-title="Agent'ın seçimi esnek, ama bedava değil."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.4</span> · NE DEĞİŞTİ</span><span class="tb-num">15</span></div><div class="body"><h1 class="title">Agent'ın seçimi esnek, ama bedava değil.</h1><div class="figrow two"><div class="frc"><div class="frn">3,3x</div><div class="frl">girdi token'ı</div><div class="frt">Agentic seçim, sabit hatta göre</div></div><div class="frc"><div class="frn">1,5x</div><div class="frl">süre</div><div class="frt">Aynı çalışma, aynı karşılaştırma</div></div></div><p class="caption">Belge seçiminde reranker'lı sabit hat daha iyiydi; yazarlar iki yaklaşımı birleştirmeyi öneriyor (ACL 2026 Industry, 2026-07).</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="16" data-unit="1.5" data-purpose="concept" data-title="Agent önce düşünür, sonra hangi aracı açacağına kendisi karar verir."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.5</span> · AGENTIC (2026)</span><span class="tb-num">16</span></div><div class="body"><h1 class="title">Agent önce düşünür, sonra hangi aracı açacağına kendisi karar verir.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d06-s16" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Araç seçim döngüsü: soru gelir, agent düşünür, bir araç çağırır, sonuç masaya konur; yeterli değilse yeniden arar, yeterliyse cevaplar. Executions'ta her adım görünür.</title>
+<defs><marker id="ar-d06-s16" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d06-t-s16" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d06-w-s16" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d06-g-s16" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d06-s16{width:100%;height:auto;display:block}
+#d06-s16 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d06-s16 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d06-s16 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d06-s16 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d06-s16 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d06-s16 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d06-s16 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d06-s16 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d06-s16 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d06-s16 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d06-s16 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d06-s16 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d06-s16 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d06-s16 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d06-s16 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d06-s16 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d06-s16 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d06-s16 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d06-s16 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d06-s16 .dash{stroke-dasharray:7 6}
+#d06-s16 .dot{fill:#16365C}
+#d06-s16 .dotl{fill:#0E7490}
+#d06-s16 .dotw{fill:#B45309}
+</style>
+<rect x="40" y="110" width="170" height="90" rx="8" class="box"/>
+<text x="125" y="162" text-anchor="middle"><tspan x="125" dy="0" class="lb">Soru</tspan></text>
+<rect x="280" y="100" width="240" height="110" rx="8" class="lit"/>
+<text x="400" y="162" text-anchor="middle"><tspan x="400" dy="0" class="lb">Agent düşünür</tspan></text>
+<rect x="590" y="100" width="310" height="110" rx="8" class="box"/>
+<text x="745" y="148" text-anchor="middle"><tspan x="745" dy="0" class="lb">Araç çağrısı</tspan><tspan x="745" dy="28" class="mono m">belge_arama ya da web_arama</tspan></text>
+<rect x="590" y="300" width="310" height="100" rx="8" class="box"/>
+<text x="745" y="357" text-anchor="middle"><tspan x="745" dy="0" class="lb">Sonuç masaya</tspan></text>
+<path d="M400 280L520 350L400 420L280 350Z" class="box"/>
+<text x="400" y="357" class="lb" text-anchor="middle">Yeterli mi?</text>
+<rect x="310" y="520" width="180" height="80" rx="8" class="box"/>
+<text x="400" y="567" text-anchor="middle"><tspan x="400" dy="0" class="lb">Cevap</tspan></text>
+<path d="M212 155H276" class="ln" marker-end="url(#ar-d06-s16)"/>
+<path d="M522 155H586" class="ln" marker-end="url(#ar-d06-s16)"/>
+<path d="M745 212V296" class="ln" marker-end="url(#ar-d06-s16)"/>
+<path d="M588 350H524" class="ln" marker-end="url(#ar-d06-s16)"/>
+<path d="M400 280V214" class="tl" marker-end="url(#ar-d06-t-s16)"/>
+<text x="414" y="256" class="accm" text-anchor="start">hayır: tekrar ara</text>
+<path d="M400 420V516" class="ln" marker-end="url(#ar-d06-s16)"/>
+<text x="414" y="474" class="m" text-anchor="start">evet</text>
+<path d="M925 100H945V400H925" class="tl"/>
+<rect x="970" y="180" width="190" height="140" rx="10" class="lit"/>
+<text x="1065" y="230" text-anchor="middle"><tspan x="1065" dy="0" class="acc">Executions'ta</tspan><tspan x="1065" dy="28" class="acc">her adım</tspan><tspan x="1065" dy="28" class="acc">görünür</tspan></text>
+</svg>
+</div><p class="caption">Yeterli değilse yeniden arar. Executions'ta her adım görünür: hangi araç, hangi sorgu, hangi parçalar.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="17" data-unit="1.5" data-purpose="follow" data-title="Aynı imbat_kb deposunu agent'a belge_arama aracı olarak takıyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.5</span> · AGENTIC (2026)</span><span class="tb-num">17</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.5</span></div><h1 class="title">Aynı imbat_kb deposunu agent'a belge_arama aracı olarak takıyoruz.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Imbat Asistan'ın ilk aracı: belge_arama, 1.3'teki depo</p><div class="clickwrap"><ol class="clicks"><li>Imbat Asistan, Tool yuvası, +, Simple Vector Store; başlık belge_arama</li><li>Operation Mode: Retrieve Documents (As Tool for AI Agent); Memory Key imbat_kb; Limit 4</li><li>Include Metadata açık; Description alanına P6</li><li>Embedding yuvası: Embeddings Google Gemini, 1.3 ile aynı model</li></ol></div><div class="pstack"><div class="prompt slim m"><div class="pid"><b>P6</b><span>node alanı: belge_arama Description</span></div><code data-pid="P6">İmbat Pedal belgelerinde anlamca arama yapar: kiralama koşulları, fiyat listesi ve ürün kodları, iptal ve iade, hasar ve güvence, şubeler ve çalışma saatleri, sık sorulan sorular. İmbat Pedal ile ilgili her soruda önce bunu kullan.</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Agent aracı yalnız adı ve açıklamasıyla tanıyor</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>Depo değişmedi; artık agent onu ne zaman açacağına kendisi karar veriyor.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="18" data-unit="1.5" data-purpose="watch" data-title="İkinci araç web_arama: agent gerekirse internete de bakıyor."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.5</span> · AGENTIC (2026)</span><span class="tb-num">18</span></div><div class="body"><div class="tag watch"><span class="ring"></span>Watch<span class="code">1.5</span></div><h1 class="title">İkinci araç web_arama: agent gerekirse internete de bakıyor.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>HTTP Request Tool ile SearXNG araması, yalnız eğitmen sunucusunda</p><div class="clickwrap"><ol class="clicks"><li>Tool yuvası, +, HTTP Request Tool; başlık web_arama</li><li>Method GET, URL http://searxng:8080/search</li><li>Query Parameters: q için P8, format için json</li><li>Description alanına P7</li></ol></div><div class="pstack"><div class="prompt slim m"><div class="pid"><b>P7</b><span>node alanı: web_arama Description</span></div><code data-pid="P7">İnternette güncel ve genel bilgi arar: hava durumu, haberler, genel sorular. İmbat Pedal'ın fiyatları, kuralları ve şubeleri için kullanma; onlar için belge_arama aracını kullan.</code></div><div class="prompt slim m"><div class="pid"><b>P8</b><span>node alanı: web_arama Query Parameter q</span></div><code data-pid="P8">{{ $fromAI('q', 'Aranacak kısa arama sorgusu', 'string') }}</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">P8: arama sorgusunu model kendisi yazıyor</span></div><p class="watching"><span class="wo">Sadece izle</span>SearXNG yalnız benim sunucumda; sen izle, belge_arama sende çalışmaya devam ediyor.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="19" data-unit="1.5" data-purpose="follow" data-title="Agent'ın hangi aracı seçtiğini Executions'ta okuyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.5</span> · AGENTIC (2026)</span><span class="tb-num">19</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.5</span></div><h1 class="title">Agent'ın hangi aracı seçtiğini Executions'ta okuyoruz.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Aynı soru 2026'da: belgeden gelen cevap, görünür bir araç seçimi</p><div class="clickwrap"><ol class="clicks"><li>Kaydet, sohbeti sıfırla, P2 gönder</li><li>Executions, son çalıştırma: belge_arama çağrısı ve agent'ın sorgusu</li><li>P9 gönder; Executions: web_arama ve belge_arama</li></ol></div><div class="pstack"><div class="prompt slim "><div class="pid"><b>P2</b><span>n8n chat</span></div><code data-pid="P2">İmbat Pedal'da elektrikli bisikletin günlük kiralama ücreti ne kadar?</code></div><div class="prompt slim "><div class="pid"><b>P9</b><span>n8n chat</span></div><code data-pid="P9">Bu hafta sonu İzmir'de hava nasıl olacak? Yağmur yağarsa rezervasyonumu ücretsiz iptal edebilir miyim?</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Agent kullanıcının cümlesini kendi arama sorgusuna çeviriyor</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>2023 zinciri bunu yapamıyordu: soruyu olduğu gibi arıyordu.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="20" data-unit="1.6" data-purpose="concept" data-title="Model yalnız masasındakini bilir: dört fiille masayı yönetiyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.6</span> · CONTEXT ENGINEERING</span><span class="tb-num">20</span></div><div class="body"><h1 class="title">Model yalnız masasındakini bilir: dört fiille masayı yönetiyoruz.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d07-s20" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Masa ve dört fiil: bağlam penceresi modelin masası; write, select, compress ve isolate masaya neyin gireceğini belirler, her birinin n8n karşılığıyla.</title>
+<defs><marker id="ar-d07-s20" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d07-t-s20" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d07-w-s20" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d07-g-s20" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d07-s20{width:100%;height:auto;display:block}
+#d07-s20 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d07-s20 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d07-s20 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d07-s20 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d07-s20 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d07-s20 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d07-s20 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d07-s20 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d07-s20 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d07-s20 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d07-s20 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d07-s20 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d07-s20 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d07-s20 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d07-s20 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d07-s20 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d07-s20 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d07-s20 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d07-s20 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d07-s20 .dash{stroke-dasharray:7 6}
+#d07-s20 .dot{fill:#16365C}
+#d07-s20 .dotl{fill:#0E7490}
+#d07-s20 .dotw{fill:#B45309}
+</style>
+<rect x="440" y="250" width="320" height="170" rx="12" class="lit"/>
+<text x="600" y="326" text-anchor="middle"><tspan x="600" dy="0" class="lb">Bağlam penceresi</tspan><tspan x="600" dy="30" class="accm">modelin masası</tspan></text>
+<rect x="40" y="265" width="150" height="140" rx="10" class="panel"/>
+<text x="115" y="328" text-anchor="middle"><tspan x="115" dy="0" class="lb">Arşiv</tspan><tspan x="115" dy="28" class="m">belgeler, web</tspan></text>
+<path d="M192 335H224" class="gl" marker-end="url(#ar-d07-g-s20)"/>
+<rect x="228" y="270" width="184" height="130" rx="10" class="box"/>
+<text x="248" y="308" text-anchor="start"><tspan x="248" dy="0" class="mono acc">select</tspan><tspan x="248" dy="28" class="mono m">belge_arama</tspan><tspan x="248" dy="28" class="mono m">web_arama</tspan></text>
+<path d="M414 335H436" class="ln" marker-end="url(#ar-d07-s20)"/>
+<rect x="440" y="60" width="320" height="120" rx="10" class="box"/>
+<text x="464" y="106" text-anchor="start"><tspan x="464" dy="0" class="mono acc">write</tspan><tspan x="464" dy="32" class="b">System Message, Memory</tspan></text>
+<path d="M600 182V246" class="ln" marker-end="url(#ar-d07-s20)"/>
+<rect x="830" y="270" width="330" height="130" rx="10" class="box"/>
+<text x="854" y="320" text-anchor="start"><tspan x="854" dy="0" class="mono acc">compress</tspan><tspan x="854" dy="32" class="b">özetçi alt workflow</tspan></text>
+<path d="M828 335H764" class="ln" marker-end="url(#ar-d07-s20)"/>
+<rect x="440" y="490" width="320" height="120" rx="10" class="box"/>
+<text x="464" y="536" text-anchor="start"><tspan x="464" dy="0" class="mono acc">isolate</tspan><tspan x="464" dy="32" class="b">alt workflow, MCP</tspan></text>
+<path d="M600 488V424" class="ln" marker-start="url(#ar-d07-s20)" marker-end="url(#ar-d07-s20)"/>
+<text x="40" y="560" text-anchor="start"><tspan x="40" dy="0" class="acc">Masada olmayanı</tspan><tspan x="40" dy="28" class="acc">model bilmez.</tspan></text>
+</svg>
+</div><p class="caption">Fazlası daha iyi değil: yaklaşık 300 token'lık odaklı girdi, yaklaşık 113 bin token'lık tam girdiyi 18 modelin hepsinde geçti (Chroma, 2025-07-14).</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="21" data-unit="1.6" data-purpose="follow" data-title="Her turda geçerli kuralları System Message ile masaya yazıyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.6</span> · CONTEXT ENGINEERING</span><span class="tb-num">21</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.6</span></div><h1 class="title">Her turda geçerli kuralları System Message ile masaya yazıyoruz.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Imbat Asistan'ın kalıcı kuralları: araç sırası, belgede yoksa ne denir, kaynak etiketi, dil</p><p class="path"><span class="pl">Yol</span>AI Agent, Options, Add Option, System Message</p><div class="promptwrap"><div class="prompt xs"><div class="pid"><b>P10</b><span>node alanı: AI Agent System Message</span></div><code data-pid="P10">Sen İmbat Pedal'ın müşteri asistanısın. İmbat Pedal, İzmir'de dört şubesi olan kurgusal bir bisiklet kiralama işletmesidir.
+- İmbat Pedal ile ilgili her soruda önce belge_arama aracını kullan. web_arama aracını yalnızca hava durumu gibi güncel ve genel bilgiler için kullan.
+- İmbat Pedal hakkındaki cevapları yalnızca belgelerde bulduğun metne dayandır. Belgelerde yoksa tam olarak "Bu bilgi belgelerimizde yok." yaz, tahmin yürütme.
+- Cevabın sonuna kullandığın her belgeyi [kaynak: dosya_adı] biçiminde yaz. Bilgi internetten geldiyse [kaynak: web] yaz.
+- Her zaman Türkçe, kısa ve net cevap ver.</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Kalıp cümle birebir: "Bu bilgi belgelerimizde yok."</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>Bu metin her turda, her sorudan önce modelin masasında.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="22" data-unit="1.6" data-purpose="follow" data-title="Araç açıklamasını değiştirip agent'ın seçimini yeniden okuyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.6</span> · CONTEXT ENGINEERING</span><span class="tb-num">22</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.6</span></div><h1 class="title">Araç açıklamasını değiştirip agent'ın seçimini yeniden okuyoruz.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Aynı soru, iki etiket: kötü açıklama P11, iyi açıklama P6</p><div class="clickwrap"><ol class="clicks"><li>belge_arama Description: P11; sohbeti sıfırla, P12; Executions'ta seçimi oku</li><li>Description'a P6'yı geri yapıştır; sohbeti sıfırla, P12 tekrar</li><li>Belgede olmayan soru: P4</li></ol></div><div class="pstack grid3"><div class="prompt slim m"><div class="pid"><b>P11</b><span>node alanı: belge_arama Description</span></div><code data-pid="P11">veri</code></div><div class="prompt slim m"><div class="pid"><b>P12</b><span>n8n chat</span></div><code data-pid="P12">Karşıyaka şubesi pazar günü kaçta kapanıyor?</code></div><div class="prompt slim m"><div class="pid"><b>P4</b><span>n8n chat</span></div><code data-pid="P4">Tekne de kiralıyor musunuz?</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">P6 ile: 18:00 ve [kaynak: 05-subeler-ve-saatler.md]</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>Yalnız bir etiket değişti; model aracı bu etiketle tanıyor.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="23" data-unit="1.6" data-purpose="follow" data-title="Simple Memory ekliyoruz: takip sorusu artık neyi sorduğumuzu biliyor."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.6</span> · CONTEXT ENGINEERING</span><span class="tb-num">23</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.6</span></div><h1 class="title">Simple Memory ekliyoruz: takip sorusu artık neyi sorduğumuzu biliyor.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Memory yuvasına Simple Memory, Context Window Length 5</p><div class="clickwrap"><ol class="clicks"><li>AI Agent, Memory yuvası, +, Simple Memory</li><li>Context Window Length: 5; kaydet</li><li>Sohbeti sıfırla; P2, hemen ardından P5</li></ol></div><div class="pstack"><div class="prompt slim "><div class="pid"><b>P2</b><span>n8n chat</span></div><code data-pid="P2">İmbat Pedal'da elektrikli bisikletin günlük kiralama ücreti ne kadar?</code></div><div class="prompt slim "><div class="pid"><b>P5</b><span>n8n chat</span></div><code data-pid="P5">Peki haftalığı kaç TL?</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">P5: 3.900 TL ve [kaynak: 02-fiyat-listesi.md]</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>Hafıza da masaya giren bir metin: son etkileşimler her turda yeniden okunuyor.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="24" data-unit="1.7" data-purpose="concept" data-title="Aynı altı belgeye üç yeni kapı; ikisinde embedding yok."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.7</span> · YENİ YAPILAR</span><span class="tb-num">24</span></div><div class="body"><h1 class="title">Aynı altı belgeye üç yeni kapı; ikisinde embedding yok.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d09-s24" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Yeni yapılar: aynı 6 belgeye üç kapı. n8n Agents Knowledge ve Claude Code grep embedding'siz arar; Claude Code MCP ile n8n'deki imbat_kb'yi çağırır, embedding n8n'de.</title>
+<defs><marker id="ar-d09-s24" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d09-t-s24" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d09-w-s24" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d09-g-s24" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d09-s24{width:100%;height:auto;display:block}
+#d09-s24 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d09-s24 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d09-s24 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d09-s24 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d09-s24 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d09-s24 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d09-s24 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d09-s24 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d09-s24 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d09-s24 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d09-s24 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d09-s24 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d09-s24 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d09-s24 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d09-s24 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d09-s24 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d09-s24 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d09-s24 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d09-s24 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d09-s24 .dash{stroke-dasharray:7 6}
+#d09-s24 .dot{fill:#16365C}
+#d09-s24 .dotl{fill:#0E7490}
+#d09-s24 .dotw{fill:#B45309}
+</style>
+<path d="M40 276H122L140 258H300V412H40Z" class="lit"/>
+<text x="170" y="324" text-anchor="middle"><tspan x="170" dy="0" class="mono m">imbat-pedal-kit/</tspan><tspan x="170" dy="30" class="mono lb">belgeler</tspan><tspan x="170" dy="30" class="accm">6 dosya</tspan></text>
+<rect x="420" y="70" width="540" height="104" rx="8" class="box"/>
+<text x="690" y="115" text-anchor="middle"><tspan x="690" dy="0" class="lb">n8n Agents Knowledge</tspan><tspan x="690" dy="28" class="mono m">glob, ripgrep, satır okuma</tspan></text>
+<rect x="420" y="285" width="540" height="104" rx="8" class="box"/>
+<text x="690" y="330" text-anchor="middle"><tspan x="690" dy="0" class="lb">Claude Code</tspan><tspan x="690" dy="28" class="mono m">Grep, Read</tspan></text>
+<rect x="420" y="500" width="210" height="104" rx="8" class="lit"/>
+<text x="525" y="545" text-anchor="middle"><tspan x="525" dy="0" class="lb">n8n</tspan><tspan x="525" dy="28" class="mono accm">imbat_kb</tspan></text>
+<rect x="680" y="520" width="100" height="64" rx="8" class="box"/>
+<text x="730" y="559" text-anchor="middle"><tspan x="730" dy="0" class="lb">MCP</tspan></text>
+<rect x="830" y="500" width="130" height="104" rx="8" class="box"/>
+<text x="895" y="545" text-anchor="middle"><tspan x="895" dy="0" class="lb">Claude</tspan><tspan x="895" dy="28" class="lb">Code</tspan></text>
+<path d="M828 552H784" class="ln" marker-end="url(#ar-d09-s24)"/>
+<path d="M678 552H634" class="ln" marker-end="url(#ar-d09-s24)"/>
+<path d="M416 122H360V300H304" class="ln" marker-end="url(#ar-d09-s24)"/>
+<path d="M416 337H304" class="ln" marker-end="url(#ar-d09-s24)"/>
+<path d="M416 552H360V374H304" class="ln" marker-end="url(#ar-d09-s24)"/>
+<rect x="990" y="98" width="170" height="48" rx="24" class="panel"/>
+<text x="1075" y="129" class="m" text-anchor="middle">embedding yok</text>
+<rect x="990" y="313" width="170" height="48" rx="24" class="panel"/>
+<text x="1075" y="344" class="m" text-anchor="middle">embedding yok</text>
+<rect x="990" y="528" width="170" height="48" rx="24" class="lit"/>
+<text x="1075" y="559" class="acc" text-anchor="middle">embedding var</text>
+</svg>
+</div><p class="caption">Kelime araması kodları ve tam adları iyi bulur. Anlam araması kelimeler örtüşmediğinde kazanır: Türkçe ekler ve karaktersiz yazım tam bu durum.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="25" data-unit="1.7" data-purpose="watch" data-title="n8n Agents Knowledge belgeleri kelimeyle tarıyor, embedding kullanmıyor."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.7</span> · YENİ YAPILAR</span><span class="tb-num">25</span></div><div class="body"><div class="tag watch"><span class="ring"></span>Watch<span class="code">1.7</span></div><h1 class="title">n8n Agents Knowledge belgeleri kelimeyle tarıyor, embedding kullanmıyor.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Önceden kurulan Imbat Bilgi agent'ı; Knowledge'da aynı 6 belge</p><div class="promptwrap"><div class="prompt xs"><div class="pid"><b>P13</b><span>n8n Agents, Instructions</span></div><code data-pid="P13">Sen İmbat Pedal'ın müşteri asistanısın. Cevapları yalnızca Knowledge'daki belgelerden ver ve kullandığın dosyayı [kaynak: dosya_adı] biçiminde yaz. Belgelerde yoksa "Bu bilgi belgelerimizde yok." de. Türkçe, kısa cevap ver.</code></div></div><div class="pstack"><div class="prompt slim "><div class="pid"><b>P14</b><span>n8n Agents chat</span></div><code data-pid="P14">Rezervasyonumu başlangıçtan 12 saat önce iptal edersem ne kadar iade alırım?</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Araç çağrıları: dosya tarama, rg araması, satır okuma</span></div><p class="watching"><span class="wo">Sadece izle</span>Bu kısmı yalnız ben yapıyorum; çağrıların sırasına bak.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="26" data-unit="1.7" data-purpose="watch" data-title="Claude Code aynı klasörde grep ile arıyor; indeks yok."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.7</span> · YENİ YAPILAR</span><span class="tb-num">26</span></div><div class="body"><div class="tag watch"><span class="ring"></span>Watch<span class="code">1.7</span></div><h1 class="title">Claude Code aynı klasörde grep ile arıyor; indeks yok.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Claude Code, imbat-pedal-kit klasöründe açık bir oturum</p><div class="promptwrap"><div class="prompt m"><div class="pid"><b>P15</b><span>Claude Code</span></div><code data-pid="P15">belgeler klasöründeki dosyalara bakarak cevap ver ve hangi dosyadan bulduğunu yaz: Rezervasyonumu başlangıçtan 12 saat önce iptal edersem ne kadar iade alırım?</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Transcript'te Grep ve Read çağrıları, sonra dosya adı</span></div><p class="watching"><span class="wo">Sadece izle</span>Aynı soru, aynı belge; bu kez kelime aramasıyla.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="27" data-unit="1.7" data-purpose="watch" data-title="Claude Code, n8n bilgi bankamızı MCP ile araç olarak çağırıyor."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.7</span> · YENİ YAPILAR</span><span class="tb-num">27</span></div><div class="body"><div class="tag watch"><span class="ring"></span>Watch<span class="code">1.7</span></div><h1 class="title">Claude Code, n8n bilgi bankamızı MCP ile araç olarak çağırıyor.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>05-kb-mcp: imbat_kb deposu bir MCP sunucusunun aracı olarak</p><div class="chain"><div class="cb"><b>MCP Server Trigger</b><span>05-kb-mcp, path imbat-kb, Bearer</span></div><div class="cb"><b>imbat_bilgi_bankasi</b><span>Call n8n Sub-Workflow Tool</span></div><div class="cb"><b>Alt akış</b><span>En yakın 4 parça, kaynak etiketiyle</span></div></div><div class="pstack"><div class="prompt slim m"><div class="pid"><b>P16</b><span>terminal</span></div><code data-pid="P16">claude mcp add --transport http imbat-kb &lt;PRODUCTION_URL&gt; --header "Authorization: Bearer &lt;TOKEN&gt;"</code></div><div class="prompt slim m"><div class="pid"><b>P17</b><span>Claude Code</span></div><code data-pid="P17">imbat-kb MCP sunucusundaki aracı kullanarak cevap ver, klasördeki dosyaları okuma: iptal edersem param ne zaman hesabima gecer</code></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Kelimeler belgeyle örtüşmese de anlam araması buluyor</span></div><p class="watching"><span class="wo">Sadece izle</span>Embedding n8n'de çalışıyor; Claude Code yalnız aracı çağırıyor.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="28" data-unit="1.8" data-purpose="concept" data-title="Ölçmüyorsan tahmin ediyorsun: on soruluk test seti panelimiz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.8</span> · ÖLÇÜM VE KAPANIŞ</span><span class="tb-num">28</span></div><div class="body"><h1 class="title">Ölçmüyorsan tahmin ediyorsun: on soruluk test seti panelimiz.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d11-s28" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Ölçüm döngüsü: test setini çalıştır, beklenenle karşılaştır, tek ayar değiştir, tekrar çalıştır; hangisinin daha iyi olduğuna skora bakarak sen karar verirsin.</title>
+<defs><marker id="ar-d11-s28" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d11-t-s28" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d11-w-s28" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d11-g-s28" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d11-s28{width:100%;height:auto;display:block}
+#d11-s28 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d11-s28 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d11-s28 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d11-s28 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d11-s28 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d11-s28 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d11-s28 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d11-s28 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d11-s28 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d11-s28 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d11-s28 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d11-s28 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d11-s28 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d11-s28 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d11-s28 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d11-s28 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d11-s28 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d11-s28 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d11-s28 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d11-s28 .dash{stroke-dasharray:7 6}
+#d11-s28 .dot{fill:#16365C}
+#d11-s28 .dotl{fill:#0E7490}
+#d11-s28 .dotw{fill:#B45309}
+</style>
+<rect x="40" y="250" width="250" height="150" rx="10" class="panel"/>
+<text x="165" y="304" text-anchor="middle"><tspan x="165" dy="0" class="lb">Test seti</tspan><tspan x="165" dy="28" class="m">10 soru, beklenen</tspan><tspan x="165" dy="28" class="m">cevap, kaynak</tspan></text>
+<rect x="380" y="100" width="240" height="96" rx="8" class="box"/>
+<text x="500" y="155" text-anchor="middle"><tspan x="500" dy="0" class="lb">Çalıştır</tspan></text>
+<rect x="760" y="100" width="280" height="96" rx="8" class="box"/>
+<text x="900" y="141" text-anchor="middle"><tspan x="900" dy="0" class="lb">Beklenenle</tspan><tspan x="900" dy="28" class="lb">karşılaştır</tspan></text>
+<path d="M900 305L1040 380L900 455L760 380Z" class="lit"/>
+<text x="900" y="374" text-anchor="middle"><tspan x="900" dy="0" class="lb">Hangisi</tspan><tspan x="900" dy="28" class="lb">daha iyi?</tspan></text>
+<rect x="380" y="335" width="240" height="96" rx="8" class="box"/>
+<text x="500" y="376" text-anchor="middle"><tspan x="500" dy="0" class="lb">Tek ayar değiştir</tspan><tspan x="500" dy="28" class="mono m">Limit 4, 2</tspan></text>
+<rect x="790" y="540" width="220" height="80" rx="8" class="box"/>
+<text x="900" y="587" text-anchor="middle"><tspan x="900" dy="0" class="lb">Daha iyi ayar kalır</tspan></text>
+<path d="M292 325H330V148H376" class="ln" marker-end="url(#ar-d11-s28)"/>
+<path d="M622 148H756" class="ln" marker-end="url(#ar-d11-s28)"/>
+<path d="M900 198V301" class="ln" marker-end="url(#ar-d11-s28)"/>
+<path d="M758 383H624" class="ln" marker-end="url(#ar-d11-s28)"/>
+<path d="M500 333V200" class="tl" marker-end="url(#ar-d11-t-s28)"/>
+<text x="516" y="272" class="acc" text-anchor="start">Tekrar</text>
+<path d="M900 457V536" class="ln" marker-end="url(#ar-d11-s28)"/>
+<text x="1052" y="387" class="m" text-anchor="start">insan kararı</text>
+<text x="691" y="370" class="m" text-anchor="middle">yeni deneme</text>
+<text x="914" y="506" class="m" text-anchor="start">sonuç</text>
+<text x="40" y="640" class="acc" text-anchor="start">Ölçmüyorsan tahmin ediyorsun.</text>
+</svg>
+</div><p class="caption">Soru, beklenen cevap, hangi belge. Tek ayarı değiştir, aynı soruları yeniden sor, sonuçları karşılaştır.</p></div><aside class="notes"></aside></section>
+<section class="slide t-follow" data-slide="29" data-unit="1.8" data-purpose="follow" data-title="1.3'te zorlanan türden üç soruyu final asistana soruyoruz."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.8</span> · ÖLÇÜM VE KAPANIŞ</span><span class="tb-num">29</span></div><div class="body"><div class="tag"><span class="dot"></span>Follow along<span class="code">1.8</span></div><h1 class="title">1.3'te zorlanan türden üç soruyu final asistana soruyoruz.</h1><p class="shows"><span class="sl">Ne kuruyoruz</span>Imbat Asistan ya da 03-context; önce sohbeti sıfırla</p><div class="pstack"><div class="prompt slim"><div class="pid"><b>P3</b><span>n8n chat</span></div><div class="pe-row"><code data-pid="P3">iptal edersem param ne zaman hesabima gecer</code><div class="exp"><span>Beklenen</span>7 iş günü, kesinti yok</div></div></div><div class="prompt slim"><div class="pid"><b>P18</b><span>n8n chat</span></div><div class="pe-row"><code data-pid="P18">İadelerinizde kesinti yapıyor musunuz?</code><div class="exp"><span>Beklenen</span>Hayır, kesinti yok</div></div></div><div class="prompt slim"><div class="pid"><b>P19</b><span>n8n chat</span></div><div class="pe-row"><code data-pid="P19">Kış aylarında kayak ekipmanı kiralıyor musunuz?</code><div class="exp"><span>Beklenen</span>"Bu bilgi belgelerimizde yok."</div></div></div></div><div class="watch"><span class="wl">Nereye bak</span><span class="wt">Her doğruya bir puan; skoru sohbete yaz (0 ile 3)</span></div><p class="watching"><span class="wo">Sadece izliyorsan</span>Beklenen cevaplar ve kaynaklar kitteki test-sorulari.csv dosyasında.</p></div><aside class="notes"></aside></section>
+<section class="slide t-concept" data-slide="30" data-unit="1.8" data-purpose="concept" data-title="Doğru yol arşivin büyüklüğüne ve sorunun çeşidine göre değişir."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.8</span> · ÖLÇÜM VE KAPANIŞ</span><span class="tb-num">30</span></div><div class="body"><h1 class="title">Doğru yol arşivin büyüklüğüne ve sorunun çeşidine göre değişir.</h1><div class="visual"><svg xmlns="http://www.w3.org/2000/svg" id="d10-s30" width="100%" viewBox="0 0 1200 675" role="img">
+<title>Ne zaman hangisi: arşiv büyüklüğü ve değişim ile soru çeşitliliği eksenlerinde long context, klasik indeks ve agentic retrieval; grep ve managed RAG başka bir eksende.</title>
+<defs><marker id="ar-d10-s30" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#16365C"/></marker><marker id="ar-d10-t-s30" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#0E7490"/></marker><marker id="ar-d10-w-s30" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#B45309"/></marker><marker id="ar-d10-g-s30" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7B8A9C"/></marker></defs>
+<style>
+#d10-s30{width:100%;height:auto;display:block}
+#d10-s30 text{font-family:Inter,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#1C2733}
+#d10-s30 .h{font-size:26px;font-weight:700;fill:#16365C}
+#d10-s30 .l{font-size:21px;font-weight:600;fill:#16365C}
+#d10-s30 .lb{font-size:21px;font-weight:700;fill:#16365C}
+#d10-s30 .b{font-size:19px;font-weight:400;fill:#1C2733}
+#d10-s30 .m{font-size:18px;font-weight:400;fill:#7B8A9C}
+#d10-s30 .acc{font-size:19px;font-weight:700;fill:#0E7490}
+#d10-s30 .accm{font-size:18px;font-weight:400;fill:#0E7490}
+#d10-s30 .wn{font-size:18px;font-weight:600;fill:#B45309}
+#d10-s30 .mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,"Courier New",monospace}
+#d10-s30 .box{fill:#FFFFFF;stroke:#16365C;stroke-width:1.5}
+#d10-s30 .panel{fill:#F7F9FB;stroke:#E3E8EF;stroke-width:1.5}
+#d10-s30 .lit{fill:#E9F5F8;stroke:#0E7490;stroke-width:1.5}
+#d10-s30 .warnbox{fill:#FFFFFF;stroke:#B45309;stroke-width:1.5}
+#d10-s30 .ln{fill:none;stroke:#16365C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d10-s30 .tl{fill:none;stroke:#0E7490;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d10-s30 .gl{fill:none;stroke:#7B8A9C;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d10-s30 .hair{fill:none;stroke:#E3E8EF;stroke-width:1.5;stroke-linecap:round}
+#d10-s30 .warnln{fill:none;stroke:#B45309;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+#d10-s30 .dash{stroke-dasharray:7 6}
+#d10-s30 .dot{fill:#16365C}
+#d10-s30 .dotl{fill:#0E7490}
+#d10-s30 .dotw{fill:#B45309}
+</style>
+<path d="M150 580V64" class="gl" marker-end="url(#ar-d10-g-s30)"/>
+<path d="M150 580H806" class="gl" marker-end="url(#ar-d10-g-s30)"/>
+<text x="150" y="46" class="lb" text-anchor="start">soru çeşitliliği</text>
+<text x="140" y="110" class="m" text-anchor="end">çok adımlı</text>
+<text x="140" y="566" class="m" text-anchor="end">benzer</text>
+<text x="170" y="620" class="m" text-anchor="start">küçük, sabit</text>
+<text x="485" y="620" class="lb" text-anchor="middle">arşiv büyüklüğü ve değişim</text>
+<text x="800" y="620" class="m" text-anchor="end">büyük, sık değişen</text>
+<rect x="170" y="80" width="210" height="480" rx="10" class="box"/>
+<text x="275" y="290" text-anchor="middle"><tspan x="275" dy="0" class="lb">Long context</tspan><tspan x="275" dy="28" class="m">hepsini</tspan><tspan x="275" dy="28" class="m">masaya koy</tspan></text>
+<circle cx="275" cy="470" r="9" class="dotl"/>
+<text x="275" y="506" class="accm" text-anchor="middle">6 belgemiz</text>
+<rect x="400" y="80" width="390" height="230" rx="10" class="lit"/>
+<text x="595" y="184" text-anchor="middle"><tspan x="595" dy="0" class="lb">Agentic retrieval</tspan><tspan x="595" dy="30" class="m">çok adımlı, belge + web</tspan></text>
+<rect x="400" y="330" width="390" height="230" rx="10" class="box"/>
+<text x="595" y="434" text-anchor="middle"><tspan x="595" dy="0" class="lb">Klasik indeks</tspan><tspan x="595" dy="30" class="m">benzer sorular, yüksek hacim</tspan></text>
+<rect x="850" y="80" width="310" height="230" rx="10" class="panel"/>
+<text x="874" y="128" text-anchor="start"><tspan x="874" dy="0" class="lb">Grep</tspan><tspan x="874" dy="28" class="m">kodlar, tam adlar;</tspan><tspan x="874" dy="28" class="m">ortak kelime yoksa</tspan><tspan x="874" dy="28" class="m">kaçırır</tspan></text>
+<rect x="850" y="330" width="310" height="230" rx="10" class="panel"/>
+<text x="874" y="378" text-anchor="start"><tspan x="874" dy="0" class="lb">Managed RAG</tspan><tspan x="874" dy="28" class="m">hattı işletmeden</tspan><tspan x="874" dy="28" class="m">kaynaklı cevap</tspan></text>
+</svg>
+</div><p class="caption">Ölçekte birleştirmek kazanır: contextual embedding, BM25 ve rerank birlikte retrieval hatalarını yüzde 67 azalttı (Anthropic, 2024-09-19).</p></div><aside class="notes"></aside></section>
+<section class="slide t-explain" data-slide="31" data-unit="1.8" data-purpose="explain" data-title="Canlıya almadan önce üç güvenlik kuralını kontrol et."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.8</span> · ÖLÇÜM VE KAPANIŞ</span><span class="tb-num">31</span></div><div class="body"><h1 class="title">Canlıya almadan önce üç güvenlik kuralını kontrol et.</h1><div class="tblwrap"><div class="tiles"><div class="tile"><b>Getirilen metin talimat taşıyabilir</b>Belge ve web sonucu da masaya girer: dolaylı prompt injection.</div><div class="tile"><b>Kişisel veri girmez</b>Ne vektör deposuna ne ücretsiz Gemini katmanına.</div><div class="tile"><b>Simple Vector Store ortak ve geçici</b>Key'ler instance genelinde okunur, yeniden başlatmada silinir.</div></div></div><p class="caption">Kaynaklar: n8n node dokümantasyonu (2026-09-26), Gemini fiyat sayfası (2026-09-24).</p></div><aside class="notes"></aside></section>
+<section class="slide t-close" data-slide="32" data-unit="1.8" data-purpose="close" data-title="Yarın üç adım: ölç, tek ayarı değiştir, kendi belgeni koy."><div class="topbar"><span class="tb-unit"><span class="tb-code">1.8</span> · ÖLÇÜM VE KAPANIŞ</span><span class="tb-num">32</span></div><div class="body"><h1 class="title">Yarın üç adım: ölç, tek ayarı değiştir, kendi belgeni koy.</h1><div class="clickwrap"><ol class="clicks"><li>Kitteki 10 soruyu sor, skorla</li><li>Limit 2 ile aynı 10 soruyu yeniden ölç</li><li>Kişisel veri içermeyen 5 belgeni aynı hatta koy, 5 soruluk test yaz</li></ol></div><div class="links"><div class="lk"><span>Handbook</span><code>https://burakcanpolat.github.io/n8n-rag-workshop-2026/</code></div><div class="lk"><span>Kit</span><code>https://burakcanpolat.github.io/n8n-rag-workshop-2026/ImbatPedal-Workshop.zip</code></div></div></div><aside class="notes"></aside></section>
+<script>window.__UNITS=[{"code": "1.1", "name": "Açılış", "time": "11:00", "title": "2023'ten 2026'ya: Belgelerinden Cevap Veren Asistan", "slide": 1}, {"code": "1.2", "name": "n8n turu", "time": "11:05", "title": "n8n bir tuval: tetikleyici başlatır, agent yuvalarına takılanla çalışır", "slide": 6}, {"code": "1.3", "name": "Klasik RAG (2023)", "time": "11:13", "title": "2023 tarifi iki hat: önce yükle, sonra her soruda getir", "slide": 8}, {"code": "1.4", "name": "Ne değişti", "time": "11:27", "title": "İndeks ölmedi: 2026'da agent'ın araçlarından biri oldu", "slide": 13}, {"code": "1.5", "name": "Agentic (2026)", "time": "11:33", "title": "Agent önce düşünür, sonra hangi aracı açacağına kendisi karar verir", "slide": 16}, {"code": "1.6", "name": "Context engineering", "time": "11:47", "title": "Model yalnız masasındakini bilir: dört fiille masayı yönetiyoruz", "slide": 20}, {"code": "1.7", "name": "Yeni yapılar", "time": "11:59", "title": "Aynı altı belgeye üç yeni kapı; ikisinde embedding yok", "slide": 24}, {"code": "1.8", "name": "Ölçüm ve kapanış", "time": "12:15", "title": "Ölçmüyorsan tahmin ediyorsun: on soruluk test seti panelimiz", "slide": 28}];window.__NONOTES=true;</script><div id="blank"></div>
+<div id="help">
+  <h2>Klavye</h2>
+  <dl>
+    <dt>Sağ ok, Boşluk, PgDn</dt><dd>Sonraki slayt</dd>
+    <dt>Sol ok, PgUp</dt><dd>Önceki slayt</dd>
+    <dt>Home, End</dt><dd>İlk slayt, son slayt</dd>
+    <dt>Sağ yarıya tıkla</dt><dd>Sonraki slayt</dd>
+    <dt>N</dt><dd>Eğitmen notları paneli</dd>
+    <dt>B</dt><dd>Ekranı karart</dd>
+    <dt>U</dt><dd>Üniteler paneli</dd>
+    <dt>Esc</dt><dd>Genel bakış</dd>
+    <dt>?</dt><dd>Bu liste</dd>
+  </dl>
+</div>
+<div id="overview"><h2>Genel bakış</h2><div id="ovgrid"></div></div>
+<div id="chrome-num"></div>
+<div id="chrome-track"><span id="chrome-fill"></span></div>
+<div id="units"><h2>Üniteler</h2><div class="ucols"></div><p class="uhint">Atlamak için bir satıra tıkla. Esc kapatır.</p></div>
+<div id="ctrlbar"><button type="button" tabindex="-1" data-cb="prev">Önceki</button><button type="button" tabindex="-1" data-cb="next">Sonraki</button><span class="cb-sep"></span><button type="button" tabindex="-1" data-cb="ov">Genel bakış</button><button type="button" tabindex="-1" data-cb="units">Üniteler</button></div>
+</div>
+</div>
+<div id="notes"><h3>Eğitmen notları</h3><div class="nt"></div><div class="nb"></div></div>
+<script>
+(function(){
+  var qam = /[?&]qa=(\d+),(\d+)/.exec(location.search);
+  if (qam){
+    var qs = document.createElement('style');
+    qs.textContent =
+      "html,body{height:auto!important;overflow:visible!important;background:#fff!important}" +
+      "#viewport{position:static!important;display:block!important;overflow:visible!important;inset:auto!important}" +
+      "#stage{transform:none!important;width:1280px!important;height:auto!important;box-shadow:none!important;overflow:visible!important;position:static!important}" +
+      "#blank,#help,#overview,#chrome-num,#chrome-track,#notes,#ctrlbar,#units{display:none!important}" +
+      "section.slide{position:relative!important;display:none!important;width:1280px!important;height:720px!important;overflow:hidden!important;animation:none!important}" +
+      "section.slide.qa{display:block!important}";
+    document.head.appendChild(qs);
+    var q0 = parseInt(qam[1], 10), qn = parseInt(qam[2], 10);
+    var qall = document.querySelectorAll('section.slide');
+    for (var qi = 0; qi < qall.length; qi++){
+      if (qi >= q0 && qi < q0 + qn) qall[qi].classList.add('qa');
+    }
+    if (document.fonts && document.fonts.ready){
+      document.fonts.ready.then(function(){ document.documentElement.classList.add('fonts-ready'); });
+    } else {
+      document.documentElement.classList.add('fonts-ready');
+    }
+    return;
+  }
+  var stage = document.getElementById('stage');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('section.slide'));
+  var total = slides.length;
+  var cur = 0;
+  var notesPanel = document.getElementById('notes');
+  var help = document.getElementById('help');
+  var overview = document.getElementById('overview');
+  var blank = document.getElementById('blank');
+  var numEl = document.getElementById('chrome-num');
+  var fillEl = document.getElementById('chrome-fill');
+  var ovBuilt = false;
+  var unitsPanel = document.getElementById('units');
+  var ctrlbar = document.getElementById('ctrlbar');
+  var uBuilt = false;
+
+  function fit(){
+    var pad = 0;
+    var w = window.innerWidth - pad, h = window.innerHeight - pad;
+    var s = Math.min(w / 1280, h / 720);
+    stage.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  function syncNotes(){
+    var s = slides[cur];
+    var a = s.querySelector('aside.notes');
+    var seg = s.getAttribute('data-seg');
+    notesPanel.querySelector('.nt').textContent = (cur + 1) + '. ' + (s.getAttribute('data-title') || '') + (seg ? '  [' + seg + ']' : '');
+    var nbody = a ? a.textContent.trim() : '';
+    notesPanel.querySelector('.nb').textContent =
+      (window.__NONOTES && !nbody) ? 'Bu kopyada eğitmen notları yok.' : nbody;
+  }
+
+  /* ------------------------------------------------------------- units */
+  function buildUnits(){
+    if (uBuilt) return;
+    var data = window.__UNITS || [];
+    var cols = unitsPanel.querySelector('.ucols');
+    var frag = document.createDocumentFragment();
+    data.forEach(function(r){
+      var row = document.createElement('div');
+      row.className = 'urow';
+      var c = document.createElement('span');
+      c.className = 'uc';
+      c.textContent = r.code;
+      var n = document.createElement('span');
+      n.className = 'un';
+      var b = document.createElement('b');
+      b.textContent = r.name;
+      n.appendChild(b);
+      if (r.title) n.appendChild(document.createTextNode(': ' + r.title));
+      var sl = document.createElement('span');
+      sl.className = 'us';
+      sl.textContent = r.time + ' · slayt ' + r.slide;
+      row.appendChild(c); row.appendChild(n); row.appendChild(sl);
+      row.addEventListener('click', function(){
+        unitsPanel.classList.remove('on');
+        show(r.slide - 1);
+      });
+      frag.appendChild(row);
+    });
+    cols.appendChild(frag);
+    uBuilt = true;
+  }
+
+  function openUnits(){
+    buildUnits();
+    help.classList.remove('on');
+    overview.classList.remove('on');
+    unitsPanel.classList.add('on');
+  }
+
+  /* --------------------------------------------------------- control bar */
+  var idleT = null;
+  function wake(){
+    ctrlbar.classList.remove('idle');
+    if (idleT) clearTimeout(idleT);
+    idleT = setTimeout(function(){ ctrlbar.classList.add('idle'); }, 3000);
+  }
+  window.addEventListener('mousemove', wake);
+  ctrlbar.addEventListener('click', function(ev){
+    var b = ev.target.closest ? ev.target.closest('button[data-cb]') : null;
+    if (!b) return;
+    ev.stopPropagation();
+    if (b.blur) b.blur();
+    var a = b.getAttribute('data-cb');
+    if (a === 'prev'){ closeOverlays(); prev(); }
+    else if (a === 'next'){ closeOverlays(); next(); }
+    else if (a === 'ov'){ unitsPanel.classList.remove('on'); buildOverview(); scaleMinis(); overview.classList.add('on'); }
+    else if (a === 'units'){ openUnits(); }
+    wake();
+  });
+
+  function show(i, push){
+    if (i < 0) i = 0;
+    if (i > total - 1) i = total - 1;
+    slides[cur].classList.remove('active');
+    cur = i;
+    var s = slides[cur];
+    s.classList.add('active');
+    stage.classList.toggle('no-chrome', s.hasAttribute('data-nochrome'));
+    numEl.textContent = (cur + 1) + ' / ' + total;
+    fillEl.style.width = ((cur + 1) / total * 100).toFixed(3) + '%';
+    try { syncNotes(); } catch (err) {}
+    if (ovBuilt){
+      var cells = overview.querySelectorAll('.ovcell');
+      for (var k = 0; k < cells.length; k++) cells[k].classList.toggle('cur', k === cur);
+    }
+    if (push !== false){
+      var want = '#' + (cur + 1);
+      try {
+        if (location.hash !== want) history.replaceState(null, '', want);
+      } catch (err) {}
+    }
+  }
+
+  function next(){ show(cur + 1); }
+  function prev(){ show(cur - 1); }
+
+  function closeOverlays(){
+    var any = help.classList.contains('on') || overview.classList.contains('on')
+              || unitsPanel.classList.contains('on');
+    help.classList.remove('on');
+    overview.classList.remove('on');
+    unitsPanel.classList.remove('on');
+    return any;
+  }
+
+  function buildOverview(){
+    if (ovBuilt) return;
+    var grid = document.getElementById('ovgrid');
+    var frag = document.createDocumentFragment();
+    slides.forEach(function(s, i){
+      var cell = document.createElement('div');
+      cell.className = 'ovcell' + (i === cur ? ' cur' : '');
+      var mini = document.createElement('div');
+      mini.className = 'mini';
+      var clone = s.cloneNode(true);
+      clone.classList.add('active');
+      clone.removeAttribute('id');
+      var a = clone.querySelector('aside.notes');
+      if (a) a.parentNode.removeChild(a);
+      mini.appendChild(clone);
+      cell.appendChild(mini);
+      var n = document.createElement('span');
+      n.className = 'ovn';
+      n.textContent = (i + 1);
+      cell.appendChild(n);
+      cell.addEventListener('click', function(){ closeOverlays(); show(i); });
+      frag.appendChild(cell);
+    });
+    grid.appendChild(frag);
+    ovBuilt = true;
+    requestAnimationFrame(scaleMinis);
+  }
+
+  function scaleMinis(){
+    var cells = overview.querySelectorAll('.ovcell');
+    for (var i = 0; i < cells.length; i++){
+      var w = cells[i].clientWidth;
+      var m = cells[i].querySelector('.mini');
+      if (m) m.style.transform = 'scale(' + (w / 1280) + ')';
+    }
+  }
+
+  function onKey(e){
+    if (e.__deck) return;
+    e.__deck = 1;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var t = e.target || {};
+    var tag = (t.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable) return;
+    var k = e.key;
+    var c = e.keyCode || e.which;
+    if (!k || k === 'Unidentified'){
+      k = ({ 27:'Escape', 39:'ArrowRight', 37:'ArrowLeft', 32:' ', 34:'PageDown',
+             33:'PageUp', 36:'Home', 35:'End', 78:'n', 66:'b', 85:'u', 191:'/' })[c] || '';
+    }
+    if (k === 'Escape' || c === 27){
+      e.preventDefault();
+      if (unitsPanel.classList.contains('on')){ unitsPanel.classList.remove('on'); }
+      else if (overview.classList.contains('on')){ overview.classList.remove('on'); }
+      else if (help.classList.contains('on')){ help.classList.remove('on'); }
+      else { buildOverview(); scaleMinis(); overview.classList.add('on'); }
+      return;
+    }
+    if (k === 'ArrowRight' || k === 'Right' || k === ' ' || k === 'Spacebar' || k === 'PageDown'
+        || c === 39 || c === 32 || c === 34){ e.preventDefault(); closeOverlays(); next(); return; }
+    if (k === 'ArrowLeft' || k === 'Left' || k === 'PageUp' || c === 37 || c === 33){
+      e.preventDefault(); closeOverlays(); prev(); return; }
+    if (k === 'Home' || c === 36){ e.preventDefault(); closeOverlays(); show(0); return; }
+    if (k === 'End' || c === 35){ e.preventDefault(); closeOverlays(); show(total - 1); return; }
+    if (k === 'n' || k === 'N'){ e.preventDefault(); notesPanel.classList.toggle('on'); return; }
+    if (k === 'b' || k === 'B'){ e.preventDefault(); blank.classList.toggle('on'); return; }
+    if (k === 'u' || k === 'U'){ e.preventDefault();
+      if (unitsPanel.classList.contains('on')) unitsPanel.classList.remove('on'); else openUnits();
+      return; }
+    if (k === '?' || (k === '/' && e.shiftKey)){ e.preventDefault(); overview.classList.remove('on'); unitsPanel.classList.remove('on'); help.classList.toggle('on'); return; }
+  }
+  /* Capture on window first: the event is caught whatever inside the page
+     holds focus, and before anything else can stop it. The document copy is
+     the fallback for hosts that retarget; onKey ignores the second visit. */
+  window.addEventListener('keydown', onKey, true);
+  document.addEventListener('keydown', onKey, true);
+
+  document.getElementById('viewport').addEventListener('click', function(e){
+    if (e.target.closest && e.target.closest('#ctrlbar')) return;
+    if (e.target.closest && e.target.closest('#units')){ return; }
+    if (e.target.closest && e.target.closest('.tb-unit')){ openUnits(); return; }
+    if (help.classList.contains('on') || overview.classList.contains('on')
+        || unitsPanel.classList.contains('on')) return;
+    if (blank.classList.contains('on')){ blank.classList.remove('on'); return; }
+    if (e.clientX > window.innerWidth / 2) next(); else prev();
+  });
+
+  function fromHash(){
+    var m = /^#(\d+)$/.exec(location.hash || '');
+    if (m){
+      var i = parseInt(m[1], 10) - 1;
+      if (!isNaN(i)) { show(i, false); return true; }
+    }
+    return false;
+  }
+  window.addEventListener('hashchange', function(){ fromHash(); });
+
+  wake();
+  try { window.focus(); } catch (err) {}
+  document.body.setAttribute('tabindex', '-1');
+  document.body.style.outline = 'none';
+  try { document.body.focus(); } catch (err) {}
+  window.addEventListener('click', function(){
+    var a = document.activeElement;
+    if (a && a !== document.body && a.blur) a.blur();
+  });
+  slides[0].classList.add('active');
+  if (!fromHash()) show(0);
+  else show(cur, false);
+
+  if (document.fonts && document.fonts.ready){
+    document.fonts.ready.then(function(){ document.documentElement.classList.add('fonts-ready'); });
+  } else {
+    document.documentElement.classList.add('fonts-ready');
+  }
+})();
+</script>
+</body>
+</html>
